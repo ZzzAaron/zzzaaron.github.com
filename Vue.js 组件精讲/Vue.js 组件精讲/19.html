@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+      <h1 class="heading" data-id="heading-0">写在最后</h1>
+      <p>亲爱的读者，到这里本小册就要结束了，你是否从中学习到了属于你的知识呢？我们来回顾一下小册的内容吧。</p>
+      <p>Vue.js 在开发独立组件时，由于它的特殊性，无法使用 Vuex、Bus 这样的第三方插件来做组件通信，因此小册提到了 3 种组件间的通信方法，都是支持跨多级的：</p>
+      <ol>
+        <li>provide / inject：由父组件通过 <code>provide</code> 向下提供一个数据，子组件在需要时，通过 <code>inject</code> 注入这个依赖，就可以直接访问父级的数据了。
+        </li>
+        <li>dispatch / broadcast：组件向上派发或向下广播一个自定义事件，组件通过 <code>$on</code> 来监听。</li>
+        <li>findComponents 系列：共包含 5 个方法，通过组件的 <code>name</code> 选项，遍历找到对应的实例，这是组件通信的终极方案，适用于所有场景。</li>
+      </ol>
+      <p>本册总共讲解了 7 个组件的实例：</p>
+      <ol>
+        <li>具有数据校验功能的 Form 组件，它用到了第 1 种组件通信；</li>
+        <li>组合多选框 Checkbox 组件，它用到了第 2 种和第 3 种组件通信；</li>
+        <li>Display 组件，它利用 Vue.js 的构造器 extend 和手动挂载 $mount API；</li>
+        <li>全局通知 $Alert 组件，也是利用了 $mount API，与传统组件不同的是，它基于 Vue.js 组件开发，但却是以 JavaScript 的形式调用的，并且组件会在 body 节点下渲染；</li>
+        <li>表格组件 Table，典型的数据驱动型组件，使用了函数式组件（Functional Render）来自定义列模板；</li>
+        <li>表格组件 Table，与上例不同的是，它的自定义列模板使用了 <code>slot-scope</code>；</li>
+        <li>树形控件 Tree，典型的数据驱动型组件，也是典型的递归组件，其中利用 computed 做父子节点联动是精髓。</li>
+      </ol>
+      <p>最后的拓展部分，对 Vue.js 组件的常见 API 做了详细介绍，以及常见的 Vue.js 面试题分析和对开源的一些见解。</p>
+      <p>Vue.js 组件开发，归根到底拼的是 JavaScript 的功底，Vue.js 在其中只是决定了开发模式，所以，打好 JavaScript 基础才是最重要的。</p>
+      <p>最后，祝愿亲爱的读者能在编程的道路上越走越远。</p>
+      <p><strong>另外，如果您有关于 Vue.js 或其它前端相关的问题，可以通过 <a target="_blank" href="https://dev.iviewui.com/issues"
+            rel="nofollow noopener noreferrer">iView 社区</a> 付费向笔者提问，希望能对一部分人有所帮助。</strong></p>
+    </div>
+</body>
+
+</html>

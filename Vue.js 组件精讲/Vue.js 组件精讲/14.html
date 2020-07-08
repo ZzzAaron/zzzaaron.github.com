@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+      <h1 class="heading" data-id="heading-0">实战 7：树形控件——Tree</h1>
+      <p>本小节基于 Vue.js 的递归组件知识，来开发一个常见的树形控件—Tree。</p>
+      <p>Tree 组件是递归类组件的典型代表，它常用于文件夹、组织架构、生物分类、国家地区等等，世间万物的大多数结构都是树形结构。使用树控件可以完整展现其中的层级关系，并具有展开收起选择等交互功能。</p>
+      <p>本节要实现的 Tree 组件具有以下功能：</p>
+      <p></p>
+      <figure><img class="lazyload inited loaded"
+          data-src="https://user-gold-cdn.xitu.io/2018/11/27/16753fd7a86231b6?imageslim" data-width="428"
+          data-height="364" src="https://user-gold-cdn.xitu.io/2018/11/27/16753fd7a86231b6?imageslim">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <ul>
+        <li>节点可以无限延伸（递归）；</li>
+        <li>可以展开 / 收起子节点；</li>
+        <li>节点可以选中，选中父节点，它的所有子节点也全部被选中，同样，反选父节点，其所有子节点也取消选择；</li>
+        <li>同一级所有子节点选中时，它的父级也自动选中，一直递归判断到根节点。</li>
+      </ul>
+      <h2 class="heading" data-id="heading-1">API</h2>
+      <p>Tree 是典型的数据驱动型组件，所以节点的配置就是一个 data，里面描述了所有节点的信息，比如图片中的示例数据为：</p>
+      <pre><code class="hljs js" lang="js">data: [
+          {
+            <span class="hljs-attr">title</span>: <span class="hljs-string">'parent 1'</span>,
+            <span class="hljs-attr">expand</span>: <span class="hljs-literal">true</span>,
+            <span class="hljs-attr">children</span>: [
+              {
+                <span class="hljs-attr">title</span>: <span class="hljs-string">'parent 1-1'</span>,
+                <span class="hljs-attr">expand</span>: <span class="hljs-literal">true</span>,
+                <span class="hljs-attr">children</span>: [
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'leaf 1-1-1'</span>
+                  },
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'leaf 1-1-2'</span>
+                  }
+                ]
+              },
+              {
+                <span class="hljs-attr">title</span>: <span class="hljs-string">'parent 1-2'</span>,
+                <span class="hljs-attr">children</span>: [
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'leaf 1-2-1'</span>
+                  },
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'leaf 1-2-1'</span>
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+        </code></pre>
+      <p>每个节点的配置（props：data）描述如下：</p>
+      <ul>
+        <li><strong>title</strong>：节点标题（本例为纯文本输出，可参考 Table 的 Render 或 slot-scope 将其扩展）；</li>
+        <li><strong>expand</strong>：是否展开直子节点。开启后，其直属子节点将展开；</li>
+        <li><strong>checked</strong>：是否选中该节点。开启后，该节点的 Checkbox 将选中；</li>
+        <li><strong>children</strong>：子节点属性数组。</li>
+      </ul>
+      <p>如果一个节点没有 children 字段，那它就是最后一个节点，这也是递归组件终结的判断依据。</p>
+      <p>同时再提供一个是否显示多选框的 props：showCheckbox，以及两个 events：</p>
+      <ul>
+        <li><strong>on-toggle-expand</strong>：展开和收起子列表时触发；</li>
+        <li><strong>on-check-change</strong>：点击复选框时触发。</li>
+      </ul>
+      <p>因为是数据驱动，组件的 API 都比较简单，这一点跟 Table 组件是一样的，它们复杂的逻辑都在组件本身。</p>
+      <h2 class="heading" data-id="heading-2">入口 tree.vue</h2>
+      <p>在 <code>src/components</code> 中新建目录 <code>tree</code>，并在 tree 下创建两个组件 <code>tree.vue</code> 和
+        <code>node.vue</code>。tree.vue 是组件的入口，用于接收和处理数据，并将数据传递给 node.vue；node.vue
+        就是一个递归组件，它构成了每一个<strong>节点</strong>，即一个可展开 / 关闭的按钮（+或-）、一个多选框（使用第 7 节的 Checkbox
+        组件）、节点标题以及递归的下一级节点。可能现在听起来比较困惑，不要慌，下面逐一分解。</p>
+      <p>tree.vue 主要负责两件事：</p>
+      <ol>
+        <li>定义了组件的入口，即组件的 API；</li>
+        <li>对接收的数据 props：data 初步处理，为了在 tree.vue 中不破坏使用者传递的源数据 data，所以会克隆一份数据（cloneData）。</li>
+      </ol>
+      <p>因为传递的数据 data 是一个复杂的数组结构，克隆它要使用深拷贝，因为浅拷贝数据仍然是引用关系，会破坏源数据。所以在工具集 <code>src/utils/assist.js</code> 中新加一个深拷贝的工具函数
+        <code>deepCopy</code>：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// assist.js，部分代码省略</span>
+        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">typeOf</span>(<span class="hljs-params">obj</span>) </span>{
+          <span class="hljs-keyword">const</span> toString = <span class="hljs-built_in">Object</span>.prototype.toString;
+          <span class="hljs-keyword">const</span> map = {
+            <span class="hljs-string">'[object Boolean]'</span>  : <span class="hljs-string">'boolean'</span>,
+            <span class="hljs-string">'[object Number]'</span>   : <span class="hljs-string">'number'</span>,
+            <span class="hljs-string">'[object String]'</span>   : <span class="hljs-string">'string'</span>,
+            <span class="hljs-string">'[object Function]'</span> : <span class="hljs-string">'function'</span>,
+            <span class="hljs-string">'[object Array]'</span>    : <span class="hljs-string">'array'</span>,
+            <span class="hljs-string">'[object Date]'</span>     : <span class="hljs-string">'date'</span>,
+            <span class="hljs-string">'[object RegExp]'</span>   : <span class="hljs-string">'regExp'</span>,
+            <span class="hljs-string">'[object Undefined]'</span>: <span class="hljs-string">'undefined'</span>,
+            <span class="hljs-string">'[object Null]'</span>     : <span class="hljs-string">'null'</span>,
+            <span class="hljs-string">'[object Object]'</span>   : <span class="hljs-string">'object'</span>
+          };
+          <span class="hljs-keyword">return</span> map[toString.call(obj)];
+        }
+        <span class="hljs-comment">// deepCopy</span>
+        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">deepCopy</span>(<span class="hljs-params">data</span>) </span>{
+          <span class="hljs-keyword">const</span> t = typeOf(data);
+          <span class="hljs-keyword">let</span> o;
+        
+          <span class="hljs-keyword">if</span> (t === <span class="hljs-string">'array'</span>) {
+            o = [];
+          } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( t === <span class="hljs-string">'object'</span>) {
+            o = {};
+          } <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">return</span> data;
+          }
+        
+          <span class="hljs-keyword">if</span> (t === <span class="hljs-string">'array'</span>) {
+            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; data.length; i++) {
+              o.push(deepCopy(data[i]));
+            }
+          } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( t === <span class="hljs-string">'object'</span>) {
+            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i <span class="hljs-keyword">in</span> data) {
+              o[i] = deepCopy(data[i]);
+            }
+          }
+          <span class="hljs-keyword">return</span> o;
+        }
+        
+        <span class="hljs-keyword">export</span> {deepCopy};
+        </code></pre>
+      <p>deepCopy 函数会递归地对数组或对象进行逐一判断，如果某项是数组或对象，再拆分继续判断，而其它类型就直接赋值了，所以深拷贝的数据不会破坏原有的数据（更多深拷贝与浅拷贝的内容，可阅读扩展阅读 1）。</p>
+      <p>先来看 tree.vue 的代码：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- src/components/tree/tree.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">tree-node</span>
+              <span class="hljs-attr">v-for</span>=<span class="hljs-string">"(item, index) in cloneData"</span>
+              <span class="hljs-attr">:key</span>=<span class="hljs-string">"index"</span>
+              <span class="hljs-attr">:data</span>=<span class="hljs-string">"item"</span>
+              <span class="hljs-attr">:show-checkbox</span>=<span class="hljs-string">"showCheckbox"</span>
+            &gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">tree-node</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> TreeNode <span class="hljs-keyword">from</span> <span class="hljs-string">'./node.vue'</span>;
+          <span class="hljs-keyword">import</span> { deepCopy } <span class="hljs-keyword">from</span> <span class="hljs-string">'../../utils/assist.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'Tree'</span>,
+            <span class="hljs-attr">components</span>: { TreeNode },
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">data</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Array</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> [];
+                }
+              },
+              <span class="hljs-attr">showCheckbox</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Boolean</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">false</span>
+              }
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">cloneData</span>: []
+              }
+            },
+            created () {
+              <span class="hljs-keyword">this</span>.rebuildData();
+            },
+            <span class="hljs-attr">watch</span>: {
+              data () {
+                <span class="hljs-keyword">this</span>.rebuildData();
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              rebuildData () {
+                <span class="hljs-keyword">this</span>.cloneData = deepCopy(<span class="hljs-keyword">this</span>.data);
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>在组件 created 时（以及 watch 监听 data 改变时），调用了 <code>rebuildData</code> 方法克隆源数据，并赋值给了 <code>cloneData</code>。</p>
+      <p>在 template 中，先是渲染了一个 node.vue 组件（<code>&lt;tree-node&gt;</code>），这一级是 Tree 的根节点，因为 cloneDate
+        是一个数组，所以这个根节点不一定只有一项，有可能是并列的多项。不过这里使用的 node.vue 还没有用到 Vue.js 的递归组件，它只处理第一级根节点。</p>
+      <p><code>&lt;tree-node&gt;</code> 组件（node.vue）接收两个 props：</p>
+      <ol>
+        <li>showCheckbox：与 tree.vue 的 showCheckbox 相同，只是进行传递；</li>
+        <li>data：node.vue 接收的 data 是一个 Object 而非 Array，因为它只负责渲染当前的一个节点，并递归渲染下一个子节点（即 children），所以这里对 cloneData
+          进行循环，将每一项节点数据赋给了 tree-node。</li>
+      </ol>
+      <h2 class="heading" data-id="heading-3">递归组件 node.vue</h2>
+      <p>node.vue 是树组件 Tree 的核心，而一个 tree-node 节点包含 4 个部分：</p>
+      <ol>
+        <li>展开与关闭的按钮（+或-）；</li>
+        <li>多选框；</li>
+        <li>节点标题；</li>
+        <li>递归子节点。</li>
+      </ol>
+      <p>先来看 node.vue 的基本结构：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- src/components/tree/node.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">ul</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"tree-ul"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">li</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"tree-li"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"tree-expand"</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleExpand"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"data.children &amp;&amp; data.children.length &amp;&amp; !data.expand"</span>&gt;</span>+<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"data.children &amp;&amp; data.children.length &amp;&amp; data.expand"</span>&gt;</span>-<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox</span>
+                <span class="hljs-attr">v-if</span>=<span class="hljs-string">"showCheckbox"</span>
+                <span class="hljs-attr">:value</span>=<span class="hljs-string">"data.checked"</span>
+                @<span class="hljs-attr">input</span>=<span class="hljs-string">"handleCheck"</span>
+              &gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>{{ data.title }}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">tree-node</span>
+                <span class="hljs-attr">v-if</span>=<span class="hljs-string">"data.expand"</span>
+                <span class="hljs-attr">v-for</span>=<span class="hljs-string">"(item, index) in data.children"</span>
+                <span class="hljs-attr">:key</span>=<span class="hljs-string">"index"</span>
+                <span class="hljs-attr">:data</span>=<span class="hljs-string">"item"</span>
+                <span class="hljs-attr">:show-checkbox</span>=<span class="hljs-string">"showCheckbox"</span>
+              &gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">tree-node</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">li</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">ul</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> iCheckbox <span class="hljs-keyword">from</span> <span class="hljs-string">'../checkbox/checkbox.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'TreeNode'</span>,
+            <span class="hljs-attr">components</span>: { iCheckbox },
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">data</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Object</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> {};
+                }
+              },
+              <span class="hljs-attr">showCheckbox</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Boolean</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">false</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">style</span>&gt;</span><span class="css">
+          <span class="hljs-selector-class">.tree-ul</span>, <span class="hljs-selector-class">.tree-li</span>{
+            <span class="hljs-attribute">list-style</span>: none;
+            <span class="hljs-attribute">padding-left</span>: <span class="hljs-number">10px</span>;
+          }
+          <span class="hljs-selector-class">.tree-expand</span>{
+            <span class="hljs-attribute">cursor</span>: pointer;
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span>
+        </code></pre>
+      <p><code>props：data</code> 包含了当前节点的所有信息，比如是否展开子节点（expand）、是否选中（checked）、子节点数据（children）等。</p>
+      <p>第一部分 expand，如果当前节点不含有子节点，也就是没有 children 字段或 children 的长度是 0，那就说明当前节点已经是最后一级节点，所以不含有展开 / 收起的按钮。</p>
+      <p>多选框直接使用了第 7 节的 Checkbox 组件（单用模式），这里将 prop: value 和事件 @input 分开绑定，没有使用 <code>v-model</code> 语法糖。value 绑定的数据
+        <code>data.checked</code> 表示当前节点是否选中，在点击多选框时，handleCheck 方法会修改 data.checked 数据，下文会分析。这里之所以不使用
+        <code>v-model</code> 而是分开绑定，是因为 @input 里要额外做一些处理，不是单纯的修改数据。</p>
+      <p>上一节我们说到，一个 Vue.js 递归组件有两个必要条件：name 特性和终结条件。name 已经指定为 <code>TreeNode</code>，而这个终结递归的条件，就是
+        <code>v-for="(item, index) in data.children"</code>，当 <code>data.children</code> 不存在或为空数组时，自然就不会继续渲染子节点，递归也就停止了。
+      </p>
+      <p>注意，这里的 <code>v-if="data.expand"</code> 并不是递归组件的终结条件，虽然它看起来像是一个可以为 <code>false</code>
+        的判断语句，但它的用处是判断当前节点<strong>的子节点</strong>是否展开（渲染），如果当前节点不展开，那它所有的子节点也就不会展开（渲染）。</p>
+      <p>上面的代码保留了两个方法 <code>handleExpand</code> 与 <code>handleCheck</code>，先来看前者。</p>
+      <p>点击 + 号时，会展开直属子节点，点击 - 号关闭，这一步只需在 <code>handleExpand</code> 中修改 data 的 expand 数据即可，同时，我们通过 Tree
+        的根组件（tree.vue）触发一个自定义事件 <code>@on-toggle-expand</code>（上文已介绍）：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// node.vue，部分代码省略</span>
+        <span class="hljs-keyword">import</span> { findComponentUpward } <span class="hljs-keyword">from</span> <span class="hljs-string">'../../utils/assist.js'</span>;
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">tree</span>: findComponentUpward(<span class="hljs-keyword">this</span>, <span class="hljs-string">'Tree'</span>)
+            }
+          },
+          <span class="hljs-attr">methods</span>: {
+            handleExpand () {
+              <span class="hljs-keyword">this</span>.$set(<span class="hljs-keyword">this</span>.data, <span class="hljs-string">'expand'</span>, !<span class="hljs-keyword">this</span>.data.expand);
+        
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.tree) {
+                <span class="hljs-keyword">this</span>.tree.emitEvent(<span class="hljs-string">'on-toggle-expand'</span>, <span class="hljs-keyword">this</span>.data);
+              }
+            },
+          }
+        }
+        </code></pre>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// tree.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">methods</span>: {
+            emitEvent (eventName, data) {
+              <span class="hljs-keyword">this</span>.$emit(eventName, data, <span class="hljs-keyword">this</span>.cloneData);
+            }
+          }
+        }
+        </code></pre>
+      <p>在 node.vue 中，通过 <code>findComponentUpward</code> 向上找到了 Tree 的实例，并调用它的 <code>emitEvent</code> 方法来触发自定义事件
+        <code>@on-toggle-expand</code>。之所以使用 <code>findComponentUpward</code> 寻找组件，而不是用 <code>$parent</code>，是因为当前的
+        node.vue，它的父级不一定就是 tree.vue，因为它是递归组件，父级有可能还是自己。</p>
+      <p>这里有一点需要注意，修改 data.expand，我们是通过 Vue 的 <code>$set</code> 方法来修改，并没有像下面这样修改：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-keyword">this</span>.data.expand = !<span class="hljs-keyword">this</span>.data.expand;
+        </code></pre>
+      <p>这样有什么区别呢？如果直接用上面这行代码修改，发现数据虽然被修改了，但是视图并没有更新（原来是 + 号，点击后还是 + 号）。要理解这里，我们先看下，到底修改了什么。这里的
+        <code>this.data</code>，是一个 props，它是通过上一级传递的，这个上一级有两种可能，一种是递归的 node.vue，一种是根组件 tree.vue，但是递归的 node.vue，最终也是由
+        tree.vue 传递的，追根溯源，要修改的 <code>this.data</code> 事实上是 tree.vue 的 <code>cloneData</code>。cloneData 里的节点数据，是不一定含有
+        <code>expand</code> 或 <code>checked</code> 字段的，如果不含有，直接通过 <code>this.data.expand</code> 修改，这个 expand
+        就不是可响应的数据，Vue.js 是无法追踪到它的变化，视图自然不会更新，而 <code>$set</code> 的用法就是对可响应对象中添加一个属性，并确保这个新属性同样是响应式的，且触发视图更新。总结来说，如果
+        expand 字段一开始是存在的（不管 true 或 false），不管用哪种方式修改都是可以的，否则必须用 <code>$set</code> 修改，结合起来，干脆直接用 $set 了。同理，后文的
+        <code>checked</code> 也是一样。</p>
+      <p>接下来是整个 Tree 组件最复杂的一部分，就是处理节点的响应状态。你可能会问，不就是选中或取消选中吗，跟 expand
+        一样，修改数据就行了？如果只是考虑一个节点，的确这样就可以了，但树组件是有上下级关系的，它们分为两种逻辑，当选中（或取消选中）一个节点时：</p>
+      <ol>
+        <li>它下面的所有子节点都会被选中；</li>
+        <li>如果同一级所有子节点选中时，它的父级也自动选中，一直递归判断到根节点。</li>
+      </ol>
+      <p>第 1 个逻辑相对简单，当选中一个节点时，只要递归地遍历它下面所属的所有子节点数据，修改所有的 <code>checked</code> 字段即可：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// node.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">methods</span>: {
+            handleCheck (checked) {
+              <span class="hljs-keyword">this</span>.updateTreeDown(<span class="hljs-keyword">this</span>.data, checked);
+        
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.tree) {
+                <span class="hljs-keyword">this</span>.tree.emitEvent(<span class="hljs-string">'on-check-change'</span>, <span class="hljs-keyword">this</span>.data);
+              }
+            },
+            updateTreeDown (data, checked) {
+              <span class="hljs-keyword">this</span>.$set(data, <span class="hljs-string">'checked'</span>, checked);
+        
+              <span class="hljs-keyword">if</span> (data.children &amp;&amp; data.children.length) {
+                data.children.forEach(<span class="hljs-function"><span class="hljs-params">item</span> =&gt;</span> {
+                  <span class="hljs-keyword">this</span>.updateTreeDown(item, checked);
+                });
+              }
+            }
+          }
+        }
+        </code></pre>
+      <p>updateTreeDown 只是向下修改了所有的数据，因为当前节点的数据里，是包含其所有子节点数据的，通过递归遍历可以轻松修改，这也是第 1 种逻辑简单的原因。</p>
+      <p>再来看第 2 个逻辑，它的难点在于，无法通过当前节点数据，修改到它的父节点，因为拿不到。写到这里，正常的思路应该是在
+        <code>this.updateTreeDown(this.data, checked);</code> 的下面再写一个 <code>updateTreeUp</code>
+        的方法，向上遍历，问题就是，怎样向上遍历，一种常规的思路是，把 <code>updateTreeUp</code> 方法写在 tree.vue 里，并且在 node.vue 的
+        <code>handleCheck</code> 方法里，通过 this.tree 调用根组件的 <code>updateTreeUp</code>，并且传递当前节点的数据，在 tree.vue
+        里，要找到当前节点的位置，那还需要一开始在 cloneData 里预先给每个节点设置一个唯一的 key，后面的逻辑读者应该能想到了，就是通过 key 找到节点位置，并向上递归判断……但是，这个方法想着就麻烦。</p>
+      <p>正常的思路不太好解决，我们就换个思路。一个节点，除了手动选中（或反选），还有就是第 2
+        种逻辑的被动选中（或反选），也就是说，如果这个节点的所有直属子节点（就是它的第一级子节点）都选中（或反选）时，这个节点就自动被选中（或反选），递归地，可以一级一级响应上去。有了这个思路，我们就可以通过
+        <code>watch</code> 来监听当前节点的子节点是否都选中，进而修改当前的 <code>checked</code> 字段：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// node.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">watch</span>: {
+            <span class="hljs-string">'data.children'</span>: {
+              handler (data) {
+                <span class="hljs-keyword">if</span> (data) {
+                  <span class="hljs-keyword">const</span> checkedAll = !data.some(<span class="hljs-function"><span class="hljs-params">item</span> =&gt;</span> !item.checked);
+                  <span class="hljs-keyword">this</span>.$set(<span class="hljs-keyword">this</span>.data, <span class="hljs-string">'checked'</span>, checkedAll);
+                }
+              },
+              <span class="hljs-attr">deep</span>: <span class="hljs-literal">true</span>
+            }
+          }
+        }
+        </code></pre>
+      <p>在 watch 中，监听了 data.children 的改变，并且是深度监听的。这段代码的意思是，当 <code>data.children</code> 中的数据的某个字段发生变化时（这里当然是指 checked
+        字段）,也就是说它的某个子节点被选中（或反选）了，这时执行绑定的句柄 handler
+        中的逻辑。<code>const checkedAll = !data.some(item =&gt; !item.checked);</code> 也是一个巧妙的缩写，checkedAll
+        最终返回结果就是当前子节点是否都被选中了。</p>
+      <p>这里非常巧妙地利用了递归的特性，因为 node.vue 是一个递归组件，那每一个组件里都会有 watch 监听
+        <code>data.children</code>，要知道，当前的节点有两个”身份“，它既是下属节点的父节点，同时也是上级节点的子节点，它作为下属节点的父节点被修改的同时，也会触发上级节点中的 watch
+        监听函数。<strong>这就是递归</strong>。</p>
+      <p>以上就是 Tree 组件的所有内容，完整的代码见： <a target="_blank"
+          href="https://github.com/icarusion/vue-component-book/tree/master/src/components/tree"
+          rel="nofollow noopener noreferrer">github.com/icarusion/v…</a></p>
+      <p>用例：<a target="_blank" href="https://github.com/icarusion/vue-component-book/blob/master/src/views/tree.vue"
+          rel="nofollow noopener noreferrer">github.com/icarusion/v…</a></p>
+      <h2 class="heading" data-id="heading-4">结语</h2>
+      <p>递归就像人类繁衍一样，蕴藏了无限可能，充满着神奇与智慧。</p>
+      <h2 class="heading" data-id="heading-5">扩展阅读</h2>
+      <ul>
+        <li><a target="_blank" href="https://juejin.im/post/5b5dcf8351882519790c9a2e" rel="">浅拷贝与深拷贝</a></li>
+      </ul>
+      <p>注：本节部分代码参考 <a target="_blank" href="https://github.com/iview/iview/blob/2.0/src/utils/assist.js#L114"
+          rel="nofollow noopener noreferrer">iView</a>。</p>
+
+    </div>
+</body>
+
+</html>

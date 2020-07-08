@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+      <h1 class="heading" data-id="heading-0">实战 4：全局提示组件——$Alert</h1>
+      <p>有一种 Vue.js 组件，它不同于常规的组件，但组件结构本身很简单，比如下面的全局提示组件：</p>
+      <p></p>
+      <figure><img class="lazyload inited loaded"
+          data-src="https://user-gold-cdn.xitu.io/2018/11/10/166fcc05107e987c?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"
+          data-width="1280" data-height="838"
+          src="https://user-gold-cdn.xitu.io/2018/11/10/166fcc05107e987c?imageView2/0/w/1280/h/960/format/webp/ignore-error/1">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>实现这样一个组件并不难，只需要简单的几行 div 和 css，但使用者可能要这样来显示组件：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">Alert</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"show"</span>&gt;</span>这是一条提示信息<span class="hljs-tag">&lt;/<span class="hljs-name">Alert</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"show = true"</span>&gt;</span>显示<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> Alert <span class="hljs-keyword">from</span> <span class="hljs-string">'../component/alert.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { Alert },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">show</span>: <span class="hljs-literal">false</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>这样的用法，有以下缺点：</p>
+      <ul>
+        <li>每个使用的地方，都得注册组件；</li>
+        <li>需要预先将 <code>&lt;Alert&gt;</code> 放置在模板中；</li>
+        <li>需要额外的 data 来控制 Alert 的显示状态；</li>
+        <li>Alert 的位置，是在当前组件位置，并非在 body 下，有可能会被其它组件遮挡。</li>
+      </ul>
+      <p>总之对使用者来说是很不友好的，那怎样才能优雅地实现这样一个组件呢？事实上，原生的 JavaScript 早已给出了答案：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// 全局提示</span>
+        <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'这是一条提示信息'</span>);
+        <span class="hljs-comment">// 二次确认</span>
+        <span class="hljs-keyword">const</span> confirm = <span class="hljs-built_in">window</span>.confirm(<span class="hljs-string">'确认删除吗？'</span>);
+        <span class="hljs-keyword">if</span> (confirm) {
+          <span class="hljs-comment">// ok</span>
+        } <span class="hljs-keyword">else</span> {
+          <span class="hljs-comment">// cancel</span>
+        }
+        </code></pre>
+      <p>所以，结论是：我们需要一个能用 JavaScript 调用组件的 API。</p>
+      <p>如果你使用过 iView 之类的组件库，一定对它内置的 $Message、$Notice、$Modal 等组件很熟悉，本节就来开发一个全局通知组件——$Alert。</p>
+      <h2 class="heading" data-id="heading-1">1/3 先把组件写好</h2>
+      <p>我们期望最终的 API 是这样的：</p>
+      <pre><code class="hljs js" lang="js">methods: {
+          handleShow () {
+            <span class="hljs-keyword">this</span>.$Alert({
+              <span class="hljs-attr">content</span>: <span class="hljs-string">'这是一条提示信息'</span>,
+              <span class="hljs-attr">duration</span>: <span class="hljs-number">3</span>
+            })
+          }
+        }
+        </code></pre>
+      <p><code>this.$Alert</code> 可以在任何位置调用，无需单独引入。该方法接收两个参数：</p>
+      <ul>
+        <li>content：提示内容；</li>
+        <li>duration：持续时间，单位秒，默认 1.5 秒，到时间自动消失。</li>
+      </ul>
+      <p>最终效果如下：</p>
+      <p></p>
+      <figure><img class="lazyload inited"
+          data-src="https://user-gold-cdn.xitu.io/2018/11/10/166fcc09c43c2ad1?imageslim" data-width="1208"
+          data-height="314"
+          src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1208&quot; height=&quot;314&quot;></svg>">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>我们从最简单的入手，不考虑其它，先写一个基本的 Alert 组件。</p>
+      <p>在 <code>src/component</code> 下新建 <code>alert</code> 目录，并创建文件 <code>alert.vue</code>：</p>
+      <p>通知可以是多个，我们用一个数组 <code>notices</code> 来管理每条通知：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- alert.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"alert"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"alert-main"</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"item in notices"</span> <span class="hljs-attr">:key</span>=<span class="hljs-string">"item.name"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"alert-content"</span>&gt;</span>{{ item.content }}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">notices</span>: []
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">style</span>&gt;</span><span class="css">
+          <span class="hljs-selector-class">.alert</span>{
+            <span class="hljs-attribute">position</span>: fixed;
+            <span class="hljs-attribute">width</span>: <span class="hljs-number">100%</span>;
+            <span class="hljs-attribute">top</span>: <span class="hljs-number">16px</span>;
+            <span class="hljs-attribute">left</span>: <span class="hljs-number">0</span>;
+            <span class="hljs-attribute">text-align</span>: center;
+            <span class="hljs-attribute">pointer-events</span>: none;
+          }
+          <span class="hljs-selector-class">.alert-content</span>{
+            <span class="hljs-attribute">display</span>: inline-block;
+            <span class="hljs-attribute">padding</span>: <span class="hljs-number">8px</span> <span class="hljs-number">16px</span>;
+            <span class="hljs-attribute">background</span>: <span class="hljs-number">#fff</span>;
+            <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">3px</span>;
+            <span class="hljs-attribute">box-shadow</span>: <span class="hljs-number">0</span> <span class="hljs-number">1px</span> <span class="hljs-number">6px</span> <span class="hljs-built_in">rgba</span>(0, 0, 0, .2);
+            <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">8px</span>;
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span>
+        </code></pre>
+      <p>Alert 组件不同于常规的组件使用方式，它最终是通过 JS 来调用的，因此组件不用预留 props 和 events 接口。</p>
+      <p>接下来，只要给数组 <code>notices</code> 增加数据，这个提示组件就能显示内容了，我们先假设，最终会通过 JS 调用 Alert 的一个方法 <code>add</code>，并将
+        <code>content</code> 和 <code>duration</code> 传入进来：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- alert.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">let</span> seed = <span class="hljs-number">0</span>;
+        
+          <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getUuid</span>(<span class="hljs-params"></span>) </span>{
+            <span class="hljs-keyword">return</span> <span class="hljs-string">'alert_'</span> + (seed++);
+          }
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">notices</span>: []
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              add (notice) {
+                <span class="hljs-keyword">const</span> name = getUuid();
+        
+                <span class="hljs-keyword">let</span> _notice = <span class="hljs-built_in">Object</span>.assign({
+                  <span class="hljs-attr">name</span>: name
+                }, notice);
+        
+                <span class="hljs-keyword">this</span>.notices.push(_notice);
+        
+                <span class="hljs-comment">// 定时移除，单位：秒</span>
+                <span class="hljs-keyword">const</span> duration = notice.duration;
+                setTimeout(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                  <span class="hljs-keyword">this</span>.remove(name);
+                }, duration * <span class="hljs-number">1000</span>);
+              },
+              remove (name) {
+                <span class="hljs-keyword">const</span> notices = <span class="hljs-keyword">this</span>.notices;
+        
+                <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; notices.length; i++) {
+                  <span class="hljs-keyword">if</span> (notices[i].name === name) {
+                    <span class="hljs-keyword">this</span>.notices.splice(i, <span class="hljs-number">1</span>);
+                    <span class="hljs-keyword">break</span>;
+                  }
+                }
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>在 <code>add</code> 方法中，给每一条传进来的提示数据，加了一个不重复的 <code>name</code> 字段来标识，并通过 <code>setTimeout</code>
+        创建了一个计时器，当到达指定的 <code>duration</code> 持续时间后，调用 <code>remove</code> 方法，将对应 <code>name</code> 的那条提示信息找到，并从数组中移除。
+      </p>
+      <p>由这个思路，Alert 组件就可以无限扩展，只要在 add 方法中传递更多的参数，就能支持更复杂的组件，比如是否显示手动关闭按钮、确定 / 取消按钮，甚至传入一个 Render
+        函数都可以，完成本例后，读者可以尝试”改造“。</p>
+      <h2 class="heading" data-id="heading-2">2/3 实例化封装</h2>
+      <p>这一步，我们对 Alert 组件进一步封装，让它能够实例化，而不是常规的组件使用方法。实例化组件我们在第 8 节中介绍过，可以使用 Vue.extend 或 new Vue，然后用 $mount 挂载到 body 节点下。
+      </p>
+      <p>在 <code>src/components/alert</code> 目录下新建 <code>notification.js</code> 文件：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// notification.js</span>
+        <span class="hljs-keyword">import</span> Alert <span class="hljs-keyword">from</span> <span class="hljs-string">'./alert.vue'</span>;
+        <span class="hljs-keyword">import</span> Vue <span class="hljs-keyword">from</span> <span class="hljs-string">'vue'</span>;
+        
+        Alert.newInstance = <span class="hljs-function"><span class="hljs-params">properties</span> =&gt;</span> {
+          <span class="hljs-keyword">const</span> props = properties || {};
+        
+          <span class="hljs-keyword">const</span> Instance = <span class="hljs-keyword">new</span> Vue({
+            <span class="hljs-attr">data</span>: props,
+            render (h) {
+              <span class="hljs-keyword">return</span> h(Alert, {
+                <span class="hljs-attr">props</span>: props
+              });
+            }
+          });
+        
+          <span class="hljs-keyword">const</span> component = Instance.$mount();
+          <span class="hljs-built_in">document</span>.body.appendChild(component.$el);
+        
+          <span class="hljs-keyword">const</span> alert = Instance.$children[<span class="hljs-number">0</span>];
+        
+          <span class="hljs-keyword">return</span> {
+            add (noticeProps) {
+              alert.add(noticeProps);
+            },
+            remove (name) {
+              alert.remove(name);
+            }
+          }
+        };
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> Alert;
+        </code></pre>
+      <p>notification.js 并不是最终的文件，它只是对 alert.vue 添加了一个方法 <code>newInstance</code>。虽然 alert.vue 包含了 template、script、style
+        三个标签，并不是一个 JS 对象，那怎么能够给它扩展一个方法 <code>newInstance</code> 呢？事实上，alert.vue 会被 Webpack 的 vue-loader 编译，把 template
+        编译为 Render 函数，最终就会成为一个 JS 对象，自然可以对它进行扩展。</p>
+      <p>Alert 组件没有任何 props，这里在 Render Alert 组件时，还是给它加了 props，当然，这里的 props 是空对象 {}，而且即使传了内容，也不起作用。这样做的目的还是为了扩展性，如果要在
+        Alert 上添加 props 来支持更多特性，是要在这里传入的。不过话说回来，因为能拿到 Alert 实例，用 data 或 props 都是可以的。</p>
+      <p>在第 8 节已经解释过，<code>const alert = Instance.$children[0];</code>，这里的 alert 就是 Render 的 Alert 组件实例。在
+        <code>newInstance</code> 里，使用闭包暴露了两个方法 <code>add</code> 和 <code>remove</code>。这里的 add 和 remove 可不是 alert.vue 里的
+        add 和 remove，它们只是名字一样。</p>
+      <h2 class="heading" data-id="heading-3">3/3 入口</h2>
+      <p>最后要做的，就是调用 notification.js 创建实例，并通过 <code>add</code> 把数据传递过去，这是组件开发的最后一步，也是最终的入口。在
+        <code>src/component/alert</code> 下创建文件 <code>alert.js</code>：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// alert.js</span>
+        <span class="hljs-keyword">import</span> Notification <span class="hljs-keyword">from</span> <span class="hljs-string">'./notification.js'</span>;
+        
+        <span class="hljs-keyword">let</span> messageInstance;
+        
+        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getMessageInstance</span> (<span class="hljs-params"></span>) </span>{
+          messageInstance = messageInstance || Notification.newInstance();
+          <span class="hljs-keyword">return</span> messageInstance;
+        }
+        
+        <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">notice</span>(<span class="hljs-params">{ duration = <span class="hljs-number">1.5</span>, content = <span class="hljs-string">''</span> }</span>) </span>{
+          <span class="hljs-keyword">let</span> instance = getMessageInstance();
+        
+          instance.add({
+            <span class="hljs-attr">content</span>: content,
+            <span class="hljs-attr">duration</span>: duration
+          });
+        }
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          info (options) {
+            <span class="hljs-keyword">return</span> notice(options);
+          }
+        }
+        </code></pre>
+      <p><code>getMessageInstance</code> 函数用来获取实例，它不会重复创建，如果 messageInstance 已经存在，就直接返回了，只在第一次调用 Notification 的
+        <code>newInstance</code> 时来创建实例。</p>
+      <p>alert.js 对外提供了一个方法 <code>info</code>，如果需要各种显示效果，比如成功的、失败的、警告的，可以在 info 下面提供更多的方法，比如 success、fail、warning
+        等，并传递不同参数让 Alert.vue 知道显示哪种状态的图标。本例因为只有一个 info，事实上也可以省略掉，直接导出一个默认的函数，这样在调用时，就不用 <code>this.$Alert.info()</code>
+        了，直接 <code>this.$Alert()</code>。</p>
+      <p>来看一下显示一个信息提示组件的流程：</p>
+      <p></p>
+      <figure><img class="lazyload inited"
+          data-src="https://user-gold-cdn.xitu.io/2018/11/10/166fcc0fe6df06d2?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"
+          data-width="1280" data-height="128"
+          src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1280&quot; height=&quot;128&quot;></svg>">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>最后把 alert.js 作为插件注册到 Vue 里就行，在入口文件 <code>src/main.js</code>中，通过 <code>prototype</code> 给 Vue 添加一个实例方法：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// src/main.js</span>
+        <span class="hljs-keyword">import</span> Vue <span class="hljs-keyword">from</span> <span class="hljs-string">'vue'</span>
+        <span class="hljs-keyword">import</span> App <span class="hljs-keyword">from</span> <span class="hljs-string">'./App.vue'</span>
+        <span class="hljs-keyword">import</span> router <span class="hljs-keyword">from</span> <span class="hljs-string">'./router'</span>
+        <span class="hljs-keyword">import</span> Alert <span class="hljs-keyword">from</span> <span class="hljs-string">'../src/components/alert/alert.js'</span>
+        
+        Vue.config.productionTip = <span class="hljs-literal">false</span>
+        
+        Vue.prototype.$Alert = Alert
+        
+        <span class="hljs-keyword">new</span> Vue({
+          router,
+          <span class="hljs-attr">render</span>: <span class="hljs-function"><span class="hljs-params">h</span> =&gt;</span> h(App)
+        }).$mount(<span class="hljs-string">'#app'</span>)
+        
+        </code></pre>
+      <p>这样在项目任何地方，都可以通过 <code>this.$Alert</code> 来调用 Alert 组件了，我们创建一个 alert 的路由，并在 <code>src/views</code> 下创建页面
+        <code>alert.vue</code>：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- src/views/alert.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleOpen1"</span>&gt;</span>打开提示 1<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleOpen2"</span>&gt;</span>打开提示 2<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">methods</span>: {
+              handleOpen1 () {
+                <span class="hljs-keyword">this</span>.$Alert.info({
+                  <span class="hljs-attr">content</span>: <span class="hljs-string">'我是提示信息 1'</span>
+                });
+              },
+              handleOpen2 () {
+                <span class="hljs-keyword">this</span>.$Alert.info({
+                  <span class="hljs-attr">content</span>: <span class="hljs-string">'我是提示信息 2'</span>,
+                  <span class="hljs-attr">duration</span>: <span class="hljs-number">3</span>
+                });
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p><code>duration</code> 如果不传入，默认是 1.5 秒。</p>
+      <p>以上就是全局通知组件的全部内容。</p>
+      <h2 class="heading" data-id="heading-4">友情提示</h2>
+      <p>本示例算是一个 MVP（最小化可行方案），要开发一个完善的全局通知组件，还需要更多可维护性和功能性的设计，但离不开本例的设计思路。以下几点是同类组件中值得注意的：</p>
+      <ol>
+        <li>Alert.vue 的最外层是有一个 .alert 节点的，它会在第一次调用 <code>$Alert</code> 时，在 body 下创建，因为不在
+          <code>&lt;router-view&gt;</code> 内，它不受路由的影响，也就是说一经创建，除非刷新页面，这个节点是不会消失的，所以在 alert.vue
+          的设计中，并没有主动销毁这个组件，而是维护了一个子节点数组 <code>notices</code>。</li>
+        <li>.alert 节点是 <code>position: fixed</code> 固定的，因此要合理设计它的 <code>z-index</code>，否则可能被其它节点遮挡。</li>
+        <li>notification.js 和 alert.vue 是可以复用的，如果还要开发其它同类的组件，比如二次确认组件 <code>$Confirm</code>, 只需要再写一个入口
+          <code>confirm.js</code>，并将 <code>alert.vue</code> 进一步封装，将 <code>notices</code> 数组的循环体写为一个新的组件，通过配置来决定是渲染 Alert
+          还是 Confirm，这在可维护性上是友好的。</li>
+        <li>在 notification.js 的 new Vue 时，使用了 Render 函数来渲染 alert.vue，这是因为使用 template 在 runtime 的 Vue.js 版本下是会报错的。</li>
+        <li>本例的 content 只能是字符串，如果要显示自定义的内容，除了用 <code>v-html</code> 指令，也能用 Functional Render（之后章节会介绍）。</li>
+      </ol>
+      <h2 class="heading" data-id="heading-5">结语</h2>
+      <p>Vue.js 的精髓是组件，组件的精髓是 JavaScript。将 JavaScript 开发中的技巧结合 Vue.js 组件，就能玩出不一样的东西。</p>
+      <p>注：本节部分代码参考 <a target="_blank" href="https://github.com/iview/iview/tree/2.0/src/components/base/notification"
+          rel="nofollow noopener noreferrer">iView</a>。</p>
+
+    </div>
+</body>
+
+</html>

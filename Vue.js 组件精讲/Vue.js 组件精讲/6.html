@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+        <h1 class="heading" data-id="heading-0">实战 2：组合多选框组件——CheckboxGroup &amp; Checkbox</h1>
+        <p>在第 5 节，我们完成了具有数据校验功能的组件 Form，本小节继续开发一个新的组件——组合多选框 Checkbox。它作为基础组件，也能集成在 Form 内并应用其验证规则。</p>
+        <h2 class="heading" data-id="heading-1">Checkbox 组件概览</h2>
+        <p>多选框组件也是由两个组件组成：CheckboxGroup 和 Checkbox。单独使用时，只需要一个 Checkbox，组合使用时，两者都要用到。效果如下图所示：</p>
+        <p></p><figure><img class="lazyload inited loaded" data-src="https://user-gold-cdn.xitu.io/2018/11/2/166d39853b7facd8?imageView2/0/w/1280/h/960/format/webp/ignore-error/1" data-width="562" data-height="334" src="https://user-gold-cdn.xitu.io/2018/11/2/166d39853b7facd8?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"><figcaption></figcaption></figure><p></p>
+        <p>单独使用，常见的场景有注册时勾选以同意注册条款，它只有一个独立的 Checkbox 组件，并且绑定一个布尔值，示例如下：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"single"</span>&gt;</span>单独选项<span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">single</span>: <span class="hljs-literal">false</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>而组合使用的场景就很多了，填写表单时会经常用到，它的结构如下：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox-group</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"multiple"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"option1"</span>&gt;</span>选项 1<span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"option2"</span>&gt;</span>选项 2<span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"option3"</span>&gt;</span>选项 3<span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-checkbox</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"option4"</span>&gt;</span>选项 4<span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">i-checkbox-group</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">multiple</span>: [<span class="hljs-string">'option1'</span>, <span class="hljs-string">'option3'</span>]
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p><code>v-model</code> 用在了 CheckboxGroup 上，绑定的值为一个数组，数组的值就是内部 Checkbox 绑定的 label。</p>
+        <p>用法看起来比 Form 要简单多，不过也有两个个技术难点：</p>
+        <ul>
+        <li>Checkbox 要同时支持单独使用和组合使用的场景；</li>
+        <li>CheckboxGroup 和 Checkbox 内可能嵌套其它的布局组件。</li>
+        </ul>
+        <p>对于第一点，要在 Checkbox 初始化时判断是否父级有 CheckboxGroup，如果有就是组合使用的，否则就是单独使用。而第二点，正好可以用上一节的通信方法，很容易就能解决。</p>
+        <p>两个组件并行开发，会容易理不清逻辑，不妨我们先开发独立的 Checkbox 组件。</p>
+        <h2 class="heading" data-id="heading-2">单独使用的 Checkbox</h2>
+        <p>设计一个组件时，还是要从它的 3 个 API 入手：prop、event、slot。</p>
+        <p>因为要在 Checkbox 组件上直接使用 <code>v-model</code> 来双向绑定数据，那必不可少的一个 prop 就是 <code>value</code>，还有 event <code>input</code>，因为 v-model 本质上是一个语法糖（如果你还不清楚这种用法，可以阅读最后的扩展阅读 1）。</p>
+        <p>理论上，我们只需要给 <code>value</code> 设置为布尔值即可，也就是 true / false，不过为了扩展性，我们再定义两个 props：<code>trueValue</code> 和 <code>falseValue</code>，它们允许用户指定 <code>value</code> 用什么值来判断是否选中。因为实际开发中，数据库中并不直接保存 true / false，而是 1 / 0 或其它字符串，如果强制使用 Boolean，使用者就要再额外转换一次，这样的 API 设计不太友好。</p>
+        <p>除此之外，还需要一个 <code>disabled</code> 属性来表示是否禁用。</p>
+        <p>自定义事件 events 上文已经说了一个 <code>input</code>，用于实现 v-model 语法糖；另一个就是 <code>on-change</code>，当选中 / 取消选中时触发，用于通知父级状态发生了变化。</p>
+        <p>slot 使用默认的就好，显示辅助文本。</p>
+        <p>理清楚了 API，先来写一个基础的 <code>v-model</code> 功能，这在大部分组件中都类似。</p>
+        <p>在 <code>src/components</code> 下新建目录 <code>checkbox</code>，并新建两个文件 <code>checkbox.vue</code> 和 <code>checkbox-group.vue</code>。我们先来看 Checkbox：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- checkbox.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">label</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">input</span>
+                     <span class="hljs-attr">type</span>=<span class="hljs-string">"checkbox"</span>
+                     <span class="hljs-attr">:disabled</span>=<span class="hljs-string">"disabled"</span>
+                     <span class="hljs-attr">:checked</span>=<span class="hljs-string">"currentValue"</span>
+                     @<span class="hljs-attr">change</span>=<span class="hljs-string">"change"</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'iCheckbox'</span>,
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">disabled</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Boolean</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">false</span>
+              },
+              <span class="hljs-attr">value</span>: {
+                <span class="hljs-attr">type</span>: [<span class="hljs-built_in">String</span>, <span class="hljs-built_in">Number</span>, <span class="hljs-built_in">Boolean</span>],
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">false</span>
+              },
+              <span class="hljs-attr">trueValue</span>: {
+                <span class="hljs-attr">type</span>: [<span class="hljs-built_in">String</span>, <span class="hljs-built_in">Number</span>, <span class="hljs-built_in">Boolean</span>],
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">true</span>
+              },
+              <span class="hljs-attr">falseValue</span>: {
+                <span class="hljs-attr">type</span>: [<span class="hljs-built_in">String</span>, <span class="hljs-built_in">Number</span>, <span class="hljs-built_in">Boolean</span>],
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">false</span>
+              }
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">currentValue</span>: <span class="hljs-keyword">this</span>.value
+              };
+            },
+            <span class="hljs-attr">methods</span>: {
+              change (event) {
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.disabled) {
+                  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+                }
+        
+                <span class="hljs-keyword">const</span> checked = event.target.checked;
+                <span class="hljs-keyword">this</span>.currentValue = checked;
+        
+                <span class="hljs-keyword">const</span> value = checked ? <span class="hljs-keyword">this</span>.trueValue : <span class="hljs-keyword">this</span>.falseValue;
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'input'</span>, value);
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'on-change'</span>, value);
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>因为 <code>value</code> 被定义为 prop，它只能由父级修改，本身是不能修改的，在 <code>&lt;input&gt;</code> 触发 change 事件，也就是点击选择时，不能由 Checkbox 来修改这个 value，所以我们在 data 里定义了一个 <code>currentValue</code>，并把它绑定在 <code>&lt;input :checked="currentValue"&gt;</code>，这样就可以在 Checkbox 内修改 <code>currentValue</code>。这是自定义组件使用 <code>v-model</code> 的“惯用伎俩”。</p>
+        <p>代码看起来都很简单，但有三个细节需要额外说明：</p>
+        <ol>
+        <li>选中的控件，直接使用了 <code>&lt;input type="checkbox"&gt;</code>，而没有用 div + css 来自己实现选择的逻辑和样式，这样的好处是，使用 input 元素，你的自定义组件仍然为 html 内置的基础组件，可以使用浏览器默认的行为和快捷键，也就是说，浏览器知道这是一个选择框，而换成 div + css，浏览器可不知道这是个什么鬼。如果你觉得原生的 input 丑，没关系，是可以用 css 美化的，不过这不是本小册的重点，在此就不介绍了。</li>
+        <li><code>&lt;input&gt;</code>、<code>&lt;slot&gt;</code> 都是包裹在一个 <code>&lt;label&gt;</code> 元素内的，这样做的好处是，当点击 <code>&lt;slot&gt;</code> 里的文字时，<code>&lt;input&gt;</code> 选框也会被触发，否则只有点击那个小框才会触发，那样不太容易选中，影响用户体验。</li>
+        <li><code>currentValue</code> 仍然是布尔值（true / false），因为它是组件 Checkbox 自己使用的，对于使用者无需关心，而 value 可以是 String、Number 或 Boolean，这取决于 <code>trueValue</code> 和 <code>falseValue</code> 的定义。</li>
+        </ol>
+        <p>现在实现的 <code>v-model</code>，只是由内而外的，也就是说，通过点击 <code>&lt;input&gt;</code>选择，会通知到使用者，而使用者手动修改了 prop <code>value</code> ，Checkbox 是没有做响应的，那继续补充代码：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- checkbox.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">watch</span>: {
+              value (val) {
+                <span class="hljs-keyword">if</span> (val === <span class="hljs-keyword">this</span>.trueValue || val === <span class="hljs-keyword">this</span>.falseValue) {
+                  <span class="hljs-keyword">this</span>.updateModel();
+                } <span class="hljs-keyword">else</span> {
+                  <span class="hljs-keyword">throw</span> <span class="hljs-string">'Value should be trueValue or falseValue.'</span>;
+                }
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              updateModel () {
+                <span class="hljs-keyword">this</span>.currentValue = <span class="hljs-keyword">this</span>.value === <span class="hljs-keyword">this</span>.trueValue;
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>我们对 prop <code>value</code> 使用 watch 进行了监听，当父级修改它时，会调用 <code>updateModel</code> 方法，同步修改内部的 <code>currentValue</code> 。不过，不是所有的值父级都能修改的，所以用 if 条件判断了父级修改的值是否符合 trueValue / falseValue 所设置的，否则会抛错。</p>
+        <p>Checkbox 也是一个基础的表单类组件，它完全可以集成到 Form 里，所以，我们使用 Emitter 在 change 事件触发时，向 Form 派发一个事件，这样你就可以用第 5 节的 Form 组件来做数据校验了：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- checkbox.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> Emitter <span class="hljs-keyword">from</span> <span class="hljs-string">'../../mixins/emitter.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">mixins</span>: [ Emitter ],
+            <span class="hljs-attr">methods</span>: {
+              change (event) {
+                <span class="hljs-comment">// ... </span>
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'input'</span>, value);
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'on-change'</span>, value);
+                <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iFormItem'</span>, <span class="hljs-string">'on-form-change'</span>, value);
+              }
+            },
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>至此，Checkbox 已经可以单独使用了，并支持 Form 的数据校验。下面来看组合使用。</p>
+        <h3 class="heading" data-id="heading-3">组合使用的 CheckboxGroup</h3>
+        <blockquote>
+        <p>友情提示：请先阅读 Vue.js 文档的 <a target="_blank" href="https://cn.vuejs.org/v2/guide/forms.html#%E5%A4%8D%E9%80%89%E6%A1%86" rel="nofollow noopener noreferrer">cn.vuejs.org/v2/guide/fo…</a> 内容。</p>
+        </blockquote>
+        <p>CheckboxGroup 的 API 很简单：</p>
+        <ul>
+        <li>props：<code>value</code>，与 Checkbox 的类似，用于 v-model 双向绑定数据，格式为数组；</li>
+        <li>events：<code>on-change</code>，同 Checkbox；</li>
+        <li>slots：默认，用于放置 Checkbox。</li>
+        </ul>
+        <p>如果写了 CheckboxGroup，那就代表你要组合使用多选框，而非单独使用，两种模式，只能用其一，而判断的依据，就是是否用了 CheckboxGroup 组件。所以在 Checkbox 组件内，我们用上一节的 <code>findComponentUpward</code> 方法判断父组件是否有 <code>CheckboxGroup</code>：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- checkbox.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">label</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">input</span>
+                     <span class="hljs-attr">v-if</span>=<span class="hljs-string">"group"</span>
+                     <span class="hljs-attr">type</span>=<span class="hljs-string">"checkbox"</span>
+                     <span class="hljs-attr">:disabled</span>=<span class="hljs-string">"disabled"</span>
+                     <span class="hljs-attr">:value</span>=<span class="hljs-string">"label"</span>
+                     <span class="hljs-attr">v-model</span>=<span class="hljs-string">"model"</span>
+                     @<span class="hljs-attr">change</span>=<span class="hljs-string">"change"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">input</span>
+                     <span class="hljs-attr">v-else</span>
+                     <span class="hljs-attr">type</span>=<span class="hljs-string">"checkbox"</span>
+                     <span class="hljs-attr">:disabled</span>=<span class="hljs-string">"disabled"</span>
+                     <span class="hljs-attr">:checked</span>=<span class="hljs-string">"currentValue"</span>
+                     @<span class="hljs-attr">change</span>=<span class="hljs-string">"change"</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> { findComponentUpward } <span class="hljs-keyword">from</span> <span class="hljs-string">'../../utils/assist.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'iCheckbox'</span>,
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">label</span>: {
+                <span class="hljs-attr">type</span>: [<span class="hljs-built_in">String</span>, <span class="hljs-built_in">Number</span>, <span class="hljs-built_in">Boolean</span>]
+              }
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">model</span>: [],
+                <span class="hljs-attr">group</span>: <span class="hljs-literal">false</span>,
+                <span class="hljs-attr">parent</span>: <span class="hljs-literal">null</span>
+              };
+            },
+            mounted () {
+              <span class="hljs-keyword">this</span>.parent = findComponentUpward(<span class="hljs-keyword">this</span>, <span class="hljs-string">'iCheckboxGroup'</span>);
+        
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.parent) {
+                <span class="hljs-keyword">this</span>.group = <span class="hljs-literal">true</span>;
+              }
+        
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.group) {
+                <span class="hljs-keyword">this</span>.parent.updateModel(<span class="hljs-literal">true</span>);
+              } <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">this</span>.updateModel();
+              }
+            },
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>在 mounted 时，通过 findComponentUpward 方法，来判断父级是否有 CheckboxGroup 组件，如果有，就将 <code>group</code> 置为 true，并触发 CheckboxGroup 的 <code>updateModel</code> 方法，下文会介绍它的作用。</p>
+        <p>在 template 里，我们又写了一个 <code>&lt;input&gt;</code> 来区分是否是 group 模式。Checkbox 的 data 里新增加的 <code>model</code> 数据，其实就是父级 CheckboxGroup 的 <code>value</code>，会在下文的 <code>updateModel</code> 方法里给 Checkbox 赋值。</p>
+        <p>Checkbox 新增的 prop： <code>label</code> 只会在组合使用时有效，结合 <code>model</code> 来使用，用法已在 Vue.js 文档中介绍了 <a target="_blank" href="https://cn.vuejs.org/v2/guide/forms.html#%E5%A4%8D%E9%80%89%E6%A1%86" rel="nofollow noopener noreferrer">cn.vuejs.org/v2/guide/fo…</a>。</p>
+        <p>在组合模式下，Checkbox 选中，就不用对 Form 派发事件了，应该在 CheckboxGroup 中派发，所以对 Checkbox 做最后的修改：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- checkbox.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">methods</span>: {
+              change (event) {
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.disabled) {
+                  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+                }
+        
+                <span class="hljs-keyword">const</span> checked = event.target.checked;
+                <span class="hljs-keyword">this</span>.currentValue = checked;
+        
+                <span class="hljs-keyword">const</span> value = checked ? <span class="hljs-keyword">this</span>.trueValue : <span class="hljs-keyword">this</span>.falseValue;
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'input'</span>, value);
+        
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.group) {
+                  <span class="hljs-keyword">this</span>.parent.change(<span class="hljs-keyword">this</span>.model);
+                } <span class="hljs-keyword">else</span> {
+                  <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'on-change'</span>, value);
+                  <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iFormItem'</span>, <span class="hljs-string">'on-form-change'</span>, value);
+                }
+              },
+              updateModel () {
+                <span class="hljs-keyword">this</span>.currentValue = <span class="hljs-keyword">this</span>.value === <span class="hljs-keyword">this</span>.trueValue;
+              },
+            },
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>剩余的工作，就是完成 checkbox-gourp.vue 文件：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- checkbox-group.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> { findComponentsDownward } <span class="hljs-keyword">from</span> <span class="hljs-string">'../../utils/assist.js'</span>;
+          <span class="hljs-keyword">import</span> Emitter <span class="hljs-keyword">from</span> <span class="hljs-string">'../../mixins/emitter.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'iCheckboxGroup'</span>,
+            <span class="hljs-attr">mixins</span>: [ Emitter ],
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">value</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Array</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> [];
+                }
+              }
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">currentValue</span>: <span class="hljs-keyword">this</span>.value,
+                <span class="hljs-attr">childrens</span>: []
+              };
+            },
+            <span class="hljs-attr">methods</span>: {
+              updateModel (update) {
+                <span class="hljs-keyword">this</span>.childrens = findComponentsDownward(<span class="hljs-keyword">this</span>, <span class="hljs-string">'iCheckbox'</span>);
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.childrens) {
+                  <span class="hljs-keyword">const</span> { value } = <span class="hljs-keyword">this</span>;
+                  <span class="hljs-keyword">this</span>.childrens.forEach(<span class="hljs-function"><span class="hljs-params">child</span> =&gt;</span> {
+                    child.model = value;
+        
+                    <span class="hljs-keyword">if</span> (update) {
+                      child.currentValue = value.indexOf(child.label) &gt;= <span class="hljs-number">0</span>;
+                      child.group = <span class="hljs-literal">true</span>;
+                    }
+                  });
+                }
+              },
+              change (data) {
+                <span class="hljs-keyword">this</span>.currentValue = data;
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'input'</span>, data);
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'on-change'</span>, data);
+                <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iFormItem'</span>, <span class="hljs-string">'on-form-change'</span>, data);
+              }
+            },
+            mounted () {
+              <span class="hljs-keyword">this</span>.updateModel(<span class="hljs-literal">true</span>);
+            },
+            <span class="hljs-attr">watch</span>: {
+              value () {
+                <span class="hljs-keyword">this</span>.updateModel(<span class="hljs-literal">true</span>);
+              }
+            }
+          };
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        
+        </code></pre><p>代码很容易理解，需要介绍的就是 <code>updateModel</code> 方法。可以看到，一共有 3 个地方调用了 <code>updateModel</code>，其中两个是 CheckboxGroup 的 mounted 初始化和 watch 监听的 value 变化时调用；另一个是在 Checkbox 里的 mounted 初始化时调用。这个方法的作用就是在 CheckboxGroup 里通过 <code>findComponentsDownward</code> 方法找到所有的 Checkbox，然后把 CheckboxGroup 的 <code>value</code>，赋值给 Checkbox 的 <code>model</code>，并根据 Checkbox 的 <code>label</code>，设置一次当前 Checkbox 的选中状态。这样无论是由内而外选择，或由外向内修改数据，都是双向绑定的，而且支持动态增加 Checkbox 的数量。</p>
+        <p>以上就是组合多选组件——CheckboxGroup &amp; Checkbox 的全部内容，不知道你是否 get 到了呢！</p>
+        <p>留两个小作业：</p>
+        <ol>
+        <li>将 CheckboxGroup 和 Checkbox 组件集成在 Form 里完成一个数据校验的示例；</li>
+        <li>参考本节的代码，实现一个单选组件 Radio 和 RadioGroup。</li>
+        </ol>
+        <h2 class="heading" data-id="heading-4">结语</h2>
+        <p>你看到的简单组件，其实都不简单。</p>
+        <h2 class="heading" data-id="heading-5">扩展阅读</h2>
+        <ul>
+        <li><a target="_blank" href="https://juejin.im/post/598bf7a3f265da3e252a1d6a" rel="">v-model 指令在组件中怎么玩</a></li>
+        </ul>
+        <p>注：本节部分代码参考 <a target="_blank" href="https://github.com/iview/iview/tree/2.0/src/components/checkbox" rel="nofollow noopener noreferrer">iView</a>。</p>
+        
+    </div>
+</body>
+
+</html>

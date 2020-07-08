@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+      <h1 class="heading" data-id="heading-0">基础：Vue.js 组件的三个 API：prop、event、slot</h1>
+      <blockquote class="warning">
+        <p>如果您已经对 Vue.js 组件的基础用法了如指掌，可以跳过本小节，不过当做复习稍读一下也无妨。
+        </p>
+      </blockquote>
+      <h2 class="heading" data-id="heading-1">组件的构成</h2>
+      <p>一个再复杂的组件，都是由三部分组成的：prop、event、slot，它们构成了 Vue.js 组件的 API。如果你开发的是一个通用组件，那一定要事先设计好这三部分，因为组件一旦发布，后面再修改 API
+        就很困难了，使用者都是希望不断新增功能，修复 bug，而不是经常变更接口。如果你阅读别人写的组件，也可以从这三个部分展开，它们可以帮助你快速了解一个组件的所有功能。</p>
+      <h3 class="heading" data-id="heading-2">属性 prop</h3>
+      <p><code>prop</code> 定义了这个组件有哪些可配置的属性，组件的核心功能也都是它来确定的。写通用组件时，props
+        最好用<strong>对象</strong>的写法，这样可以针对每个属性设置类型、默认值或自定义校验属性的值，这点在组件开发中很重要，然而很多人却忽视，直接使用 props
+        的数组用法，这样的组件往往是不严谨的。比如我们封装一个按钮组件 <code>&lt;i-button&gt;</code>：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">:class</span>=<span class="hljs-string">"'i-button-size' + size"</span> <span class="hljs-attr">:disabled</span>=<span class="hljs-string">"disabled"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-comment">// 判断参数是否是其中之一</span>
+          <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">oneOf</span> (<span class="hljs-params">value, validList</span>) </span>{
+            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; validList.length; i++) {
+              <span class="hljs-keyword">if</span> (value === validList[i]) {
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+              }
+            }
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+          }
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">size</span>: {
+                validator (value) {
+                  <span class="hljs-keyword">return</span> oneOf(value, [<span class="hljs-string">'small'</span>, <span class="hljs-string">'large'</span>, <span class="hljs-string">'default'</span>]);
+                },
+                <span class="hljs-attr">default</span>: <span class="hljs-string">'default'</span>
+              },
+              <span class="hljs-attr">disabled</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Boolean</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-literal">false</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>使用组件：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> <span class="hljs-attr">size</span>=<span class="hljs-string">"large"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> <span class="hljs-attr">disabled</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        </code></pre>
+      <p>组件中定义了两个属性：尺寸 size 和 是否禁用 disabled。其中 size 使用 <code>validator</code> 进行了值的自定义验证，也就是说，从父级传入的 size，它的值必须是指定的
+        <strong>small、large、default</strong> 中的一个，默认值是 default，如果传入这三个以外的值，都会抛出一条警告。</p>
+      <p>要注意的是，组件里定义的 props，都是<strong>单向数据流</strong>，也就是只能通过父级修改，组件自己不能修改 props 的值，只能修改定义在 data
+        里的数据，非要修改，也是通过后面介绍的自定义事件通知父级，由父级来修改。</p>
+      <p>在使用组件时，也可以传入一些标准的 html 特性，比如 <strong>id</strong>、<strong>class</strong>：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"btn1"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"btn-submit"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        </code></pre>
+      <p>这样的 html 特性，在组件内的 <code>&lt;button&gt;</code> 元素上会继承，并不需要在 props 里再定义一遍。这个特性是默认支持的，如果不期望开启，在组件选项里配置
+        <code>inheritAttrs: false</code> 就可以禁用了。</p>
+      <h3 class="heading" data-id="heading-3">插槽 slot</h3>
+      <p>如果要给上面的按钮组件 <code>&lt;i-button&gt;</code> 添加一些文字内容，就要用到组件的第二个 API：插槽 slot，它可以分发组件的内容，比如在上面的按钮组件中定义一个插槽：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">:class</span>=<span class="hljs-string">"'i-button-size' + size"</span> <span class="hljs-attr">:disabled</span>=<span class="hljs-string">"disabled"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        </code></pre>
+      <p>这里的 <code>&lt;slot&gt;</code> 节点就是指定的一个插槽的位置，这样在组件内部就可以扩展内容了：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-button</span>&gt;</span>按钮 1<span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">i-button</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">strong</span>&gt;</span>按钮 2<span class="hljs-tag">&lt;/<span class="hljs-name">strong</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        </code></pre>
+      <p>当需要多个插槽时，会用到具名 slot，比如上面的组件我们再增加一个 slot，用于设置另一个图标组件：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">:class</span>=<span class="hljs-string">"'i-button-size' + size"</span> <span class="hljs-attr">:disabled</span>=<span class="hljs-string">"disabled"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"icon"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        </code></pre>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-button</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i-icon</span> <span class="hljs-attr">slot</span>=<span class="hljs-string">"icon"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"checkmark"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-icon</span>&gt;</span>
+          按钮 1
+        <span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        </code></pre>
+      <p>这样，父级内定义的内容，就会出现在组件对应的 slot 里，没有写名字的，就是默认的 slot。</p>
+      <p>在组件的 <code>&lt;slot&gt;</code> 里也可以写一些默认的内容，这样在父级没有写任何 slot 时，它们就会出现，比如：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span>提交<span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+        </code></pre>
+      <h3 class="heading" data-id="heading-4">自定义事件 event</h3>
+      <p>现在我们给组件 <code>&lt;i-button&gt;</code> 加一个点击事件，目前有两种写法，我们先看自定义事件 event（部分代码省略）：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleClick"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">methods</span>: {
+              handleClick (event) {
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'on-click'</span>, event);
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>通过 <code>$emit</code>，就可以触发自定义的事件 <code>on-click</code> ，在父级通过 <code>@on-click</code> 来监听：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> @<span class="hljs-attr">on-click</span>=<span class="hljs-string">"handleClick"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        </code></pre>
+      <p>上面的 click 事件，是在组件内部的 <code>&lt;button&gt;</code> 元素上声明的，这里还有另一种方法，直接在父级声明，但为了区分原生事件和自定义事件，要用到事件修饰符
+        <code>.native</code>，所以上面的示例也可以这样写：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> @<span class="hljs-attr">click.native</span>=<span class="hljs-string">"handleClick"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+        </code></pre>
+      <p>如果不写 <code>.native</code> 修饰符，那上面的 <code>@click</code> 就是<strong>自定义事件</strong> click，而非<strong>原生事件</strong>
+        click，但我们在组件内只触发了 <code>on-click</code> 事件，而不是 <code>click</code>，所以直接写 <code>@click</code> 会监听不到。</p>
+      <h2 class="heading" data-id="heading-5">组件的通信</h2>
+      <p>一般来说，组件可以有以下几种关系：</p>
+      <p></p>
+      <figure><img alt="组件关系" class="lazyload inited"
+          data-src="https://user-gold-cdn.xitu.io/2018/10/18/166864d066bbcf69?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"
+          data-width="790" data-height="632"
+          src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;790&quot; height=&quot;632&quot;></svg>">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>A 和 B、B 和 C、B 和 D 都是父子关系，C 和 D 是兄弟关系，A 和 C 是隔代关系（可能隔多代）。组件间经常会通信，Vue.js 内置的通信手段一般有两种：</p>
+      <ul>
+        <li><code>ref</code>：给元素或组件注册引用信息；</li>
+        <li><code>$parent</code> / <code>$children</code>：访问父 / 子实例。</li>
+      </ul>
+      <p>这两种都是直接得到组件实例，使用后可以直接调用组件的方法或访问数据，比如下面的示例中，用 ref 来访问组件（部分代码省略）：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// component-a</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">title</span>: <span class="hljs-string">'Vue.js'</span>
+            }
+          },
+          <span class="hljs-attr">methods</span>: {
+            sayHello () {
+              <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'Hello'</span>);
+            }
+          }
+        }
+        </code></pre>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">component-a</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">"comA"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">component-a</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            mounted () {
+              <span class="hljs-keyword">const</span> comA = <span class="hljs-keyword">this</span>.$refs.comA;
+              <span class="hljs-built_in">console</span>.log(comA.title);  <span class="hljs-comment">// Vue.js</span>
+              comA.sayHello();  <span class="hljs-comment">// 弹窗</span>
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p><code>$parent</code> 和 <code>$children</code> 类似，也是基于当前上下文访问父组件或全部子组件的。</p>
+      <p>这两种方法的弊端是，无法在<strong>跨级</strong>或<strong>兄弟</strong>间通信，比如下面的结构：</p>
+      <pre><code class="hljs html" lang="html">// parent.vue
+        <span class="hljs-tag">&lt;<span class="hljs-name">component-a</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">component-a</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">component-b</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">component-b</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">component-b</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">component-b</span>&gt;</span>
+        </code></pre>
+      <p>我们想在 component-a 中，访问到引用它的页面中（这里就是 parent.vue）的两个 component-b 组件，那这种情况下，就得配置额外的插件或工具了，比如 Vuex 和 Bus
+        的解决方案，本小册不再做它们的介绍，读者可以自行阅读相关内容。不过，它们都是依赖第三方插件的存在，这在开发独立组件时是不可取的，而在小册的后续章节，会陆续介绍一些黑科技，它们完全不依赖任何三方插件，就可以轻松得到任意的组件实例，或在任意组件间进行通信，且适用于任意场景。
+      </p>
+      <h2 class="heading" data-id="heading-6">结语</h2>
+      <p>本小节带您复习了 Vue.js 组件的核心知识点，虽然这并没有完全覆盖 Vue.js 的 API，但对于组件开发来说已经足够了，后续章节也会陆续扩展更多的用法。</p>
+      <p>基于 Vue.js 开发独立组件，并不是新奇的挑战，坦率地讲，它本质上还是 JavaScript。掌握了 Vue.js 组件的这三个 API
+        后，剩下的便是程序的设计。在组件开发中，最难的环节应当是解耦组件的交互逻辑，尽量把复杂的逻辑分发到不同的子组件中，然后彼此建立联系，在这其中，计算属性（computed）和混合（mixins）是两个重要的技术点，合理利用，就能发挥出
+        Vue.js 语言的最大特点：把状态（数据）的维护交给 Vue.js 处理，我们只专注在交互上。</p>
+      <p>当您最终读完本小册时，应该会总结出和笔者一样的感悟：Vue.js 组件开发，玩到最后还是在拼 JavaScript 功底。对于每一位使用 Vue.js
+        的开发者来说，阅读完本小册都可以尝试开发和维护一套属于自己的组件库，并乐在其中，而且你会越发觉得，一个组件或一套组件库，就是融合了前端精髓的产出。</p>
+      <h2 class="heading" data-id="heading-7">扩展阅读</h2>
+      <ul>
+        <li><a target="_blank" href="https://juejin.im/post/5a4353766fb9a044fb080927" rel="">Vue 组件通信之 Bus</a></li>
+        <li><a target="_blank" href="https://juejin.im/entry/58cb4c36b123db00532076a2" rel="">Vuex 通俗版教程</a></li>
+      </ul>
+
+    </div>
+</body>
+
+</html>

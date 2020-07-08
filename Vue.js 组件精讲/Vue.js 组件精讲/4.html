@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+      <h1 class="heading" data-id="heading-0">实战 1：具有数据校验功能的表单组件——Form</h1>
+      <p>在第 3 节和第 4 节中，我们介绍了组件间的两种通信方法：provide / inject 和 dispatch / broadcast，前者是 Vue.js
+        内置的，主要用于子组件获取父组件（包括跨级）的状态；后者是自行实现的一种混合，用于父子组件（包括跨级）间通过自定义事件通信。本小节则基于这两种通信方法，来实现一个具有数据校验功能的表单组件——Form。</p>
+      <h2 class="heading" data-id="heading-1">Form 组件概览</h2>
+      <p>
+        表单类组件在项目中会大量使用，比如输入框（Input）、单选（Radio）、多选（Checkbox）、下拉选择器（Select）等。在使用表单类组件时，也会经常用到数据校验，如果每次都写校验程序来对每一个表单控件校验，会很低效，因此需要一个能够校验基础表单控件的组件，也就是本节要完成的
+        Form 组件。一般的组件库都提供了这个组件，比如 iView，它能够校验内置的 15 种控件，且支持校验自定义组件，如下图所示：</p>
+      <p>（也可以在线访问本示例体验：<a target="_blank" href="https://run.iviewui.com/jwrqnFss"
+          rel="nofollow noopener noreferrer">run.iviewui.com/jwrqnFss</a>）</p>
+      <p></p>
+      <figure><img class="lazyload inited loaded"
+          data-src="https://user-gold-cdn.xitu.io/2018/10/30/166c3b75c37ef9a8?imageslim" data-width="900"
+          data-height="958" src="https://user-gold-cdn.xitu.io/2018/10/30/166c3b75c37ef9a8?imageslim">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>Form 组件分为两个部分，一个是外层的 <code>Form</code> 表单域组件，一组表单控件只有一个 Form，而内部包含了多个 <code>FormItem</code> 组件，每一个表单控件都被一个
+        FormItem 包裹。基本的结构看起来像：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">i-form</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i-form-item</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-input</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"form.name"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-input</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">i-form-item</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i-form-item</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-input</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"form.mail"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-input</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">i-form-item</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">i-form</span>&gt;</span>
+        </code></pre>
+      <p>Form 要用到数据校验，并在对应的 FormItem 中给出校验失败的提示，校验我们会用到一个开源库：<a target="_blank"
+          href="https://github.com/yiminghe/async-validator"
+          rel="nofollow noopener noreferrer">async-validator</a>，基本主流的组件库都是基于它做的校验。使用它很简单，只需按要求写好一个校验规则就好，比如：</p>
+      <pre><code class="hljs js" lang="js">[
+          { <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'邮箱不能为空'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> },
+          { <span class="hljs-attr">type</span>: <span class="hljs-string">'email'</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'邮箱格式不正确'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> }
+        ]
+        </code></pre>
+      <p>这个代表要校验的数据先判断是否为空（required: true），如果为空，则提示“邮箱不能为空”，触发校验的事件为失焦（trigger:
+        'blur'），如果第一条满足要求，再进行第二条的验证，判断是否为邮箱格式（type: 'email'）等等，还支持自定义校验规则。更详细的用法可以参看它的文档。</p>
+      <h2 class="heading" data-id="heading-2">接口设计</h2>
+      <p>我们先使用最新的 Vue CLI 3 创建一个空白的项目（如果你还不清楚 Vue CLI 3 的用法，需要先补习一下了，可以阅读文末的扩展阅读 1），并使用 <code>vue-router</code> 插件，同时安装好
+        <code>async-validator</code> 库。</p>
+      <p>在 <code>src/components</code> 下新建一个 <code>form</code> 文件夹，并初始化两个组件 <code>form.vue</code> 和
+        <code>form-item.vue</code>，然后初始化项目，配置路由，创建一个页面能够被访问到。</p>
+      <blockquote>
+        <p>本节所有代码可以在 <a target="_blank" href="https://github.com/icarusion/vue-component-book"
+            rel="nofollow noopener noreferrer">github.com/icarusion/v…</a>
+          中查看，你可以一边看源码，一边阅读本节；也可以边阅读，边动手实现一遍，遇到问题再参考完整的源码。</p>
+      </blockquote>
+      <p>第 2 节我们介绍到，编写一个 Vue.js 组件，最重要的是设计好它的接口，一个 Vue.js 组件的接口来自三个部分：props、slots、events。而 Form 和 FormItem
+        两个组件主要做数据校验，用不到 events。Form 的 slot 就是一系列的 FormItem，FormItem 的 slot 就是具体的表单控件，比如输入框 <code>&lt;i-input&gt;</code>
+        。那主要设计的就是 props 了。</p>
+      <p>在 <code>Form</code> 组件中，定义两个 props：</p>
+      <ul>
+        <li>model：表单控件绑定的数据对象，在校验或重置时会访问该数据对象下对应的表单数据，类型为 Object。</li>
+        <li>rules：表单验证规则，即上面介绍的 async-validator 所使用的校验规则，类型为 Object。</li>
+      </ul>
+      <p>在 <code>FormItem</code> 组件中，也定义两个 props：</p>
+      <ul>
+        <li>label：单个表单组件的标签文本，类似原生的 <code>&lt;label&gt;</code> 元素，类型为 String。</li>
+        <li>prop：对应表单域 Form 组件 model 里的字段，用于在校验或重置时访问表单组件绑定的数据，类型为 String。</li>
+      </ul>
+      <p>定义好 props，就可以写出大概的用例了：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-form</span> <span class="hljs-attr">:model</span>=<span class="hljs-string">"formValidate"</span> <span class="hljs-attr">:rules</span>=<span class="hljs-string">"ruleValidate"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">i-form-item</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"用户名"</span> <span class="hljs-attr">prop</span>=<span class="hljs-string">"name"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">i-input</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"formValidate.name"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-input</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">i-form-item</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">i-form-item</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"邮箱"</span> <span class="hljs-attr">prop</span>=<span class="hljs-string">"mail"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">i-input</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"formValidate.mail"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-input</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">i-form-item</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">i-form</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> iForm <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/form/form.vue'</span>;
+          <span class="hljs-keyword">import</span> iFormItem <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/form/form-item.vue'</span>;
+          <span class="hljs-keyword">import</span> iInput <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/input/input.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { iForm, iFormItem, iInput },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">formValidate</span>: {
+                  <span class="hljs-attr">name</span>: <span class="hljs-string">''</span>,
+                  <span class="hljs-attr">mail</span>: <span class="hljs-string">''</span>
+                },
+                <span class="hljs-attr">ruleValidate</span>: {
+                  <span class="hljs-attr">name</span>: [
+                    { <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'用户名不能为空'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> }
+                  ],
+                  <span class="hljs-attr">mail</span>: [
+                    { <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'邮箱不能为空'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> },
+                    { <span class="hljs-attr">type</span>: <span class="hljs-string">'email'</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'邮箱格式不正确'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> }
+                  ],
+                }
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>有两点需要注意的是：</p>
+      <ol>
+        <li>这里的 <code>&lt;i-input&gt;</code> 并不是原生的 <code>&lt;input&gt;</code> 输入框，而是一个特制的输入框组件，之后会介讲解的功能和代码；</li>
+        <li><code>&lt;i-form-item&gt;</code> 的属性 <code>prop</code> 是字符串，所以它前面没有冒号（即不是 <code>:prop="name"</code>）。</li>
+      </ol>
+      <p>当前的两个组件只是个框框，还没有实现任何功能，不过万事开头难，定义好接口，剩下的就是补全组件的逻辑，而对于使用者，知道了 props、events、slots，就已经能写出上例的使用代码了。</p>
+      <p>到此，Form 和 FormItem 的代码如下：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- form.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">form</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">form</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'iForm'</span>,
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">model</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Object</span>
+              },
+              <span class="hljs-attr">rules</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Object</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- form-item.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"label"</span>&gt;</span>{{ label }}<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'iFormItem'</span>,
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">label</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-string">''</span>
+              },
+              <span class="hljs-attr">prop</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <h2 class="heading" data-id="heading-3">在 Form 中缓存 FormItem 实例</h2>
+      <p><code>Form</code> 组件的核心功能是数据校验，一个 Form 中包含了多个 FormItem，当点击提交按钮时，要逐一对每个 FormItem 内的表单组件校验，而校验是由使用者发起，并通过
+        <code>Form</code> 来调用每一个 <code>FormItem</code> 的验证方法，再将校验结果汇总后，通过 <code>Form</code> 返回出去。大致的流程如下图所示：</p>
+      <p></p>
+      <figure><img class="lazyload inited"
+          data-src="https://user-gold-cdn.xitu.io/2018/10/30/166c3b7f124cb84a?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"
+          data-width="1046" data-height="610"
+          src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1046&quot; height=&quot;610&quot;></svg>">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>因为要在 Form 中逐一调用 FormItem 的验证方法，而 Form 和 FormItem 是独立的，需要预先将 FormItem 的每个实例缓存在 Form 中，这个操作就需要用到第 4 节的组件通信方法。当每个
+        FormItem 渲染时，将其自身（this）作为参数通过 <code>dispatch</code> 派发到 Form 组件中，然后通过一个数组缓存起来；同理当 FormItem 销毁时，将其从 Form
+        缓存的数组中移除。相关代码如下：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form-item.vue，部分代码省略</span>
+        
+        <span class="hljs-keyword">import</span> Emitter <span class="hljs-keyword">from</span> <span class="hljs-string">'../../mixins/emitter.js'</span>;
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">name</span>: <span class="hljs-string">'iFormItem'</span>,
+          <span class="hljs-attr">mixins</span>: [ Emitter ],
+          <span class="hljs-comment">// 组件渲染时，将实例缓存在 Form 中</span>
+          mounted () {
+            <span class="hljs-comment">// 如果没有传入 prop，则无需校验，也就无需缓存</span>
+            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.prop) {
+              <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iForm'</span>, <span class="hljs-string">'on-form-item-add'</span>, <span class="hljs-keyword">this</span>);
+            }
+          },
+          <span class="hljs-comment">// 组件销毁前，将实例从 Form 的缓存中移除</span>
+          beforeDestroy () {
+            <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iForm'</span>, <span class="hljs-string">'on-form-item-remove'</span>, <span class="hljs-keyword">this</span>);
+          }
+        }
+        </code></pre>
+      <p>注意，Vue.js 的组件渲染顺序是由内而外的，所以 FormItem 要先于 Form 渲染，在 FormItem 的 mounted 触发时，我们向 Form 派发了事件
+        <code>on-form-item-add</code>，并将当前 FormItem 的实例（this）传递给了 Form，而此时，Form 的 mounted 尚未触发，因为 Form 在最外层，如果在 Form 的
+        mounted 里监听事件，是不可以的，所以要在其 created 内监听自定义事件，Form 的 created 要先于 FormItem 的 mounted。所以 Form 的相关代码为：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">name</span>: <span class="hljs-string">'iForm'</span>,
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">fields</span>: []
+            };
+          },
+          created () {
+            <span class="hljs-keyword">this</span>.$on(<span class="hljs-string">'on-form-item-add'</span>, (field) =&gt; {
+              <span class="hljs-keyword">if</span> (field) <span class="hljs-keyword">this</span>.fields.push(field);
+            });
+            <span class="hljs-keyword">this</span>.$on(<span class="hljs-string">'on-form-item-remove'</span>, (field) =&gt; {
+              <span class="hljs-keyword">if</span> (field.prop) <span class="hljs-keyword">this</span>.fields.splice(<span class="hljs-keyword">this</span>.fields.indexOf(field), <span class="hljs-number">1</span>);
+            });
+          }
+        }
+        </code></pre>
+      <p>定义的数据 <code>fields</code> 就是用来缓存所有 FormItem 实例的。</p>
+      <h2 class="heading" data-id="heading-4">触发校验</h2>
+      <p>Form 支持两种事件来触发校验：</p>
+      <ul>
+        <li><strong>blur</strong>：失去焦点时触发，常见的有输入框失去焦点时触发校验；</li>
+        <li><strong>change</strong>：实时输入时触发或选择时触发，常见的有输入框实时输入时触发校验、下拉选择器选择项目时触发校验等。</li>
+      </ul>
+      <p>以上两个事件，都是有具体的表单组件来触发的，我们先来编写一个简单的输入框组件 <code>i-input</code>。在 <code>components</code> 下新建目录
+        <code>input</code>，并创建文件 <code>input.vue</code>：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- input.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">input</span>
+                 <span class="hljs-attr">type</span>=<span class="hljs-string">"text"</span>
+                 <span class="hljs-attr">:value</span>=<span class="hljs-string">"currentValue"</span>
+                 @<span class="hljs-attr">input</span>=<span class="hljs-string">"handleInput"</span>
+                 @<span class="hljs-attr">blur</span>=<span class="hljs-string">"handleBlur"</span>
+                 /&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> Emitter <span class="hljs-keyword">from</span> <span class="hljs-string">'../../mixins/emitter.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'iInput'</span>,
+            <span class="hljs-attr">mixins</span>: [ Emitter ],
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">value</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-string">''</span>
+              },
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">currentValue</span>: <span class="hljs-keyword">this</span>.value
+              }
+            },
+            <span class="hljs-attr">watch</span>: {
+              value (val) {
+                <span class="hljs-keyword">this</span>.currentValue = val;
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              handleInput (event) {
+                <span class="hljs-keyword">const</span> value = event.target.value;
+                <span class="hljs-keyword">this</span>.currentValue = value;
+                <span class="hljs-keyword">this</span>.$emit(<span class="hljs-string">'input'</span>, value);
+                <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iFormItem'</span>, <span class="hljs-string">'on-form-change'</span>, value);
+              },
+              handleBlur () {
+                <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iFormItem'</span>, <span class="hljs-string">'on-form-blur'</span>, <span class="hljs-keyword">this</span>.currentValue);
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>Input 组件中，绑定在 <code>&lt;input&gt;</code> 元素上的原生事件 <code>@input</code>，每当输入一个字符，都会调用句柄
+        <code>handleInput</code>，并通过 <code>dispatch</code> 方法向上级的 FormItem 组件派发自定义事件
+        <code>on-form-change</code>；同理，绑定的原生事件 <code>@blur</code> 会在 input 失焦时触发，并传递事件 <code>on-form-blur</code>。</p>
+      <p>基础组件有了，接下来要做的，是在 FormItem 中监听来自 Input 组件派发的自定义事件。这里可以在 mounted 中监听，因为你的手速远赶不上组件渲染的速度，不过在 created
+        中监听也是没任何问题的。相关代码如下：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form-item.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">methods</span>: {
+            setRules () {
+              <span class="hljs-keyword">this</span>.$on(<span class="hljs-string">'on-form-blur'</span>, <span class="hljs-keyword">this</span>.onFieldBlur);
+              <span class="hljs-keyword">this</span>.$on(<span class="hljs-string">'on-form-change'</span>, <span class="hljs-keyword">this</span>.onFieldChange);
+            },
+          },
+          mounted () {
+            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.prop) {
+              <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iForm'</span>, <span class="hljs-string">'on-form-item-add'</span>, <span class="hljs-keyword">this</span>);
+              <span class="hljs-keyword">this</span>.setRules();
+            }
+          }
+        }
+        </code></pre>
+      <p>通过调用 <code>setRules</code> 方法，监听表单组件的两个事件，并绑定了句柄函数 <code>onFieldBlur</code> 和 <code>onFieldChange</code>，分别对应
+        blur 和 change 两种事件类型。当 onFieldBlur 或 onFieldChange 函数触发时，就意味着 FormItem
+        要对<strong>当前的数据</strong>进行一次校验。当前的数据，指的就是通过表单域 Form 中定义的 props：model，结合当前 FormItem 定义的 props：prop
+        来确定的数据，可以回顾上文写过的用例。</p>
+      <p>因为 FormItem 中只定义了数据源的某个 key 名称（即属性 prop），要拿到 Form 中 model 里的数据，需要用到第 3 节的通信方法 provide / inject。所以在 Form
+        中，把整个实例（this）向下提供，并在 FormItem 中注入：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          provide() {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">form</span> : <span class="hljs-keyword">this</span>
+            };
+          }
+        }
+        </code></pre>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form-item.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">inject</span>: [<span class="hljs-string">'form'</span>]
+        }
+        </code></pre>
+      <p>准备好这些，接着就是最核心的校验功能了。blur 和 change 事件都会触发校验，它们调用同一个方法，只是参数不同。相关代码如下：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form-item.vue，部分代码省略</span>
+        <span class="hljs-keyword">import</span> AsyncValidator <span class="hljs-keyword">from</span> <span class="hljs-string">'async-validator'</span>;
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">inject</span>: [<span class="hljs-string">'form'</span>],
+          <span class="hljs-attr">props</span>: {
+            <span class="hljs-attr">prop</span>: {
+              <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>
+            },
+          },
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">validateState</span>: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 校验状态</span>
+              validateMessage: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 校验不通过时的提示信息</span>
+            }
+          },
+          <span class="hljs-attr">computed</span>: {
+            <span class="hljs-comment">// 从 Form 的 model 中动态得到当前表单组件的数据</span>
+            fieldValue () {
+              <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.form.model[<span class="hljs-keyword">this</span>.prop];
+            }
+          },
+          <span class="hljs-attr">methods</span>: {
+            <span class="hljs-comment">// 从 Form 的 rules 属性中，获取当前 FormItem 的校验规则</span>
+            getRules () {
+              <span class="hljs-keyword">let</span> formRules = <span class="hljs-keyword">this</span>.form.rules;
+        
+              formRules = formRules ? formRules[<span class="hljs-keyword">this</span>.prop] : [];
+        
+              <span class="hljs-keyword">return</span> [].concat(formRules || []);
+            },
+            <span class="hljs-comment">// 只支持 blur 和 change，所以过滤出符合要求的 rule 规则</span>
+            getFilteredRule (trigger) {
+              <span class="hljs-keyword">const</span> rules = <span class="hljs-keyword">this</span>.getRules();
+              <span class="hljs-keyword">return</span> rules.filter(<span class="hljs-function"><span class="hljs-params">rule</span> =&gt;</span> !rule.trigger || rule.trigger.indexOf(trigger) !== <span class="hljs-number">-1</span>);
+            },
+            <span class="hljs-comment">/**
+             * 校验数据
+             * @param trigger 校验类型
+             * @param callback 回调函数
+             */</span>
+            validate(trigger, callback = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{}) {
+              <span class="hljs-keyword">let</span> rules = <span class="hljs-keyword">this</span>.getFilteredRule(trigger);
+        
+              <span class="hljs-keyword">if</span> (!rules || rules.length === <span class="hljs-number">0</span>) {
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+              }
+        
+              <span class="hljs-comment">// 设置状态为校验中</span>
+              <span class="hljs-keyword">this</span>.validateState = <span class="hljs-string">'validating'</span>;
+        
+              <span class="hljs-comment">// 以下为 async-validator 库的调用方法</span>
+              <span class="hljs-keyword">let</span> descriptor = {};
+              descriptor[<span class="hljs-keyword">this</span>.prop] = rules;
+        
+              <span class="hljs-keyword">const</span> validator = <span class="hljs-keyword">new</span> AsyncValidator(descriptor);
+              <span class="hljs-keyword">let</span> model = {};
+        
+              model[<span class="hljs-keyword">this</span>.prop] = <span class="hljs-keyword">this</span>.fieldValue;
+        
+              validator.validate(model, { <span class="hljs-attr">firstFields</span>: <span class="hljs-literal">true</span> }, errors =&gt; {
+                <span class="hljs-keyword">this</span>.validateState = !errors ? <span class="hljs-string">'success'</span> : <span class="hljs-string">'error'</span>;
+                <span class="hljs-keyword">this</span>.validateMessage = errors ? errors[<span class="hljs-number">0</span>].message : <span class="hljs-string">''</span>;
+        
+                callback(<span class="hljs-keyword">this</span>.validateMessage);
+              });
+            },
+            onFieldBlur() {
+              <span class="hljs-keyword">this</span>.validate(<span class="hljs-string">'blur'</span>);
+            },
+            onFieldChange() {
+              <span class="hljs-keyword">this</span>.validate(<span class="hljs-string">'change'</span>);
+            }
+          }
+        }
+        </code></pre>
+      <p>在 FormItem 的 <code>validate()</code> 方法中，最终做了两件事：</p>
+      <ol>
+        <li>设置了当前的校验状态 <code>validateState</code> 和校验不通过提示信息 <code>validateMessage</code>（通过值为空）；</li>
+        <li>将 validateMessage 通过回调 callback 传递给调用者，这里的调用者是 onFieldBlur 和 onFieldChange，它们只传入了第一个参数
+          <code>trigger</code>，callback 并未传入，因此也不会触发回调，而这个回调主要是给 Form 用的，因为 Form 中可以通过提交按钮一次性校验所有的
+          FormItem（后文会介绍）这里只是表单组件触发事件时，对当前 FormItem 做校验。</li>
+      </ol>
+      <p>除了校验，还可以对当前数据进行重置。重置是指将表单组件的数据还原到最初绑定的值，而不是清空，因此需要预先缓存一份初始值。同时我们将校验信息也显示在模板中，并加一些样式。相关代码如下：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- form-item.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"label"</span> <span class="hljs-attr">:class</span>=<span class="hljs-string">"{ 'i-form-item-label-required': isRequired }"</span>&gt;</span>{{ label }}<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"validateState === 'error'"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"i-form-item-message"</span>&gt;</span>{{ validateMessage }}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">label</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-string">''</span>
+              },
+              <span class="hljs-attr">prop</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>
+              },
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">isRequired</span>: <span class="hljs-literal">false</span>,  <span class="hljs-comment">// 是否为必填</span>
+                validateState: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 校验状态</span>
+                validateMessage: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 校验不通过时的提示信息</span>
+              }
+            },
+            mounted () {
+              <span class="hljs-comment">// 如果没有传入 prop，则无需校验，也就无需缓存</span>
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.prop) {
+                <span class="hljs-keyword">this</span>.dispatch(<span class="hljs-string">'iForm'</span>, <span class="hljs-string">'on-form-item-add'</span>, <span class="hljs-keyword">this</span>);
+        
+                <span class="hljs-comment">// 设置初始值，以便在重置时恢复默认值</span>
+                <span class="hljs-keyword">this</span>.initialValue = <span class="hljs-keyword">this</span>.fieldValue;
+        
+                <span class="hljs-keyword">this</span>.setRules();
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              setRules () {
+                <span class="hljs-keyword">let</span> rules = <span class="hljs-keyword">this</span>.getRules();
+                <span class="hljs-keyword">if</span> (rules.length) {
+                  rules.every(<span class="hljs-function">(<span class="hljs-params">rule</span>) =&gt;</span> {
+                    <span class="hljs-comment">// 如果当前校验规则中有必填项，则标记出来</span>
+                    <span class="hljs-keyword">this</span>.isRequired = rule.required;
+                  });
+                }
+        
+                <span class="hljs-keyword">this</span>.$on(<span class="hljs-string">'on-form-blur'</span>, <span class="hljs-keyword">this</span>.onFieldBlur);
+                <span class="hljs-keyword">this</span>.$on(<span class="hljs-string">'on-form-change'</span>, <span class="hljs-keyword">this</span>.onFieldChange);
+              },
+              <span class="hljs-comment">// 从 Form 的 rules 属性中，获取当前 FormItem 的校验规则</span>
+              getRules () {
+                <span class="hljs-keyword">let</span> formRules = <span class="hljs-keyword">this</span>.form.rules;
+        
+                formRules = formRules ? formRules[<span class="hljs-keyword">this</span>.prop] : [];
+        
+                <span class="hljs-keyword">return</span> [].concat(formRules || []);
+              },
+              <span class="hljs-comment">// 重置数据</span>
+              resetField () {
+                <span class="hljs-keyword">this</span>.validateState = <span class="hljs-string">''</span>;
+                <span class="hljs-keyword">this</span>.validateMessage = <span class="hljs-string">''</span>;
+        
+                <span class="hljs-keyword">this</span>.form.model[<span class="hljs-keyword">this</span>.prop] = <span class="hljs-keyword">this</span>.initialValue;
+              },
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">style</span>&gt;</span><span class="css">
+          <span class="hljs-selector-class">.i-form-item-label-required</span><span class="hljs-selector-pseudo">:before</span> {
+            <span class="hljs-attribute">content</span>: <span class="hljs-string">'*'</span>;
+            <span class="hljs-attribute">color</span>: red;
+          }
+          <span class="hljs-selector-class">.i-form-item-message</span> {
+            <span class="hljs-attribute">color</span>: red;
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span>
+        </code></pre>
+      <p>至此，FormItem 代码已经完成，不过它只具有单独校验的功能，也就是说，只能对自己的一个表单组件验证，不能对一个表单域里的所有组件一次性全部校验。而实现全部校验和全部重置的功能，要在 Form 中完成。</p>
+      <p>上文已经介绍到，在 <code>Form</code> 组件中，预先缓存了全部的 FormItem 实例，自然也能在 Form 中调用它们。通过点击提交按钮全部校验，或点击重置按钮全部重置数据，只需要在 Form
+        中，逐一调用缓存的 FormItem 实例中的 <code>validate</code> 或 <code>resetField</code> 方法。相关代码如下：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// form.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">fields</span>: []
+            };
+          },
+          <span class="hljs-attr">methods</span>: {
+            <span class="hljs-comment">// 公开方法：全部重置数据</span>
+            resetFields() {
+              <span class="hljs-keyword">this</span>.fields.forEach(<span class="hljs-function"><span class="hljs-params">field</span> =&gt;</span> {
+                field.resetField();
+              });
+            },
+            <span class="hljs-comment">// 公开方法：全部校验数据，支持 Promise</span>
+            validate(callback) {
+              <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function"><span class="hljs-params">resolve</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> valid = <span class="hljs-literal">true</span>;
+                <span class="hljs-keyword">let</span> count = <span class="hljs-number">0</span>;
+                <span class="hljs-keyword">this</span>.fields.forEach(<span class="hljs-function"><span class="hljs-params">field</span> =&gt;</span> {
+                  field.validate(<span class="hljs-string">''</span>, errors =&gt; {
+                    <span class="hljs-keyword">if</span> (errors) {
+                      valid = <span class="hljs-literal">false</span>;
+                    }
+                    <span class="hljs-keyword">if</span> (++count === <span class="hljs-keyword">this</span>.fields.length) {
+                      <span class="hljs-comment">// 全部完成</span>
+                      resolve(valid);
+                      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> callback === <span class="hljs-string">'function'</span>) {
+                        callback(valid);
+                      }
+                    }
+                  });
+                });
+              });
+            }
+          },
+        }
+        </code></pre>
+      <p>虽然说 Vue.js 的 API 只来自 prop、event、slot 这三个部分，但一些场景下，需要通过 <code>ref</code> 来访问这个组件，调用它的一些内置方法，比如上面的
+        <code>validate</code> 和 <code>resetFields</code> 方法，就需要使用者来主动调用。</p>
+      <p>resetFields 很简单，就是通过循环逐一调用 FormItem 的 resetField 方法来重置数据。validate 稍显复杂，它支持两种使用方法，一种是普通的回调，比如：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-form</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">"form"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-form</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleSubmit"</span>&gt;</span>提交<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">methods</span>: {
+              handleSubmit () {
+                <span class="hljs-keyword">this</span>.$refs.form.validate(<span class="hljs-function">(<span class="hljs-params">valid</span>) =&gt;</span> {
+                  <span class="hljs-keyword">if</span> (valid) {
+                    <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'提交成功'</span>);
+                  } <span class="hljs-keyword">else</span> {
+                    <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'表单校验失败'</span>);
+                  }
+                })
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>同时也支持 Promise，例如：</p>
+      <pre><code class="hljs js" lang="js">handleSubmit () {
+          <span class="hljs-keyword">const</span> validate = <span class="hljs-keyword">this</span>.$refs.form.validate();
+          
+          validate.then(<span class="hljs-function">(<span class="hljs-params">valid</span>) =&gt;</span> {
+            <span class="hljs-keyword">if</span> (valid) {
+              <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'提交成功'</span>);
+            } <span class="hljs-keyword">else</span> {
+              <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'表单校验失败'</span>);
+            }
+          })
+        }
+        </code></pre>
+      <p>在 Form 组件定义的 Promise 中，只调用了 resolve(valid)，没有调用 reject()，因此不能直接使用 <code>.catch()</code> ，不过聪明的你稍作修改，肯定能够支持到！
+      </p>
+      <p>完整的用例如下：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">h3</span>&gt;</span>具有数据校验功能的表单组件——Form<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-form</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">"form"</span> <span class="hljs-attr">:model</span>=<span class="hljs-string">"formValidate"</span> <span class="hljs-attr">:rules</span>=<span class="hljs-string">"ruleValidate"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">i-form-item</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"用户名"</span> <span class="hljs-attr">prop</span>=<span class="hljs-string">"name"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">i-input</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"formValidate.name"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-input</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">i-form-item</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">i-form-item</span> <span class="hljs-attr">label</span>=<span class="hljs-string">"邮箱"</span> <span class="hljs-attr">prop</span>=<span class="hljs-string">"mail"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">i-input</span> <span class="hljs-attr">v-model</span>=<span class="hljs-string">"formValidate.mail"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-input</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">i-form-item</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">i-form</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleSubmit"</span>&gt;</span>提交<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleReset"</span>&gt;</span>重置<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> iForm <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/form/form.vue'</span>;
+          <span class="hljs-keyword">import</span> iFormItem <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/form/form-item.vue'</span>;
+          <span class="hljs-keyword">import</span> iInput <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/input/input.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { iForm, iFormItem, iInput },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">formValidate</span>: {
+                  <span class="hljs-attr">name</span>: <span class="hljs-string">''</span>,
+                  <span class="hljs-attr">mail</span>: <span class="hljs-string">''</span>
+                },
+                <span class="hljs-attr">ruleValidate</span>: {
+                  <span class="hljs-attr">name</span>: [
+                    { <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'用户名不能为空'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> }
+                  ],
+                  <span class="hljs-attr">mail</span>: [
+                    { <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'邮箱不能为空'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> },
+                    { <span class="hljs-attr">type</span>: <span class="hljs-string">'email'</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">'邮箱格式不正确'</span>, <span class="hljs-attr">trigger</span>: <span class="hljs-string">'blur'</span> }
+                  ],
+                }
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              handleSubmit () {
+                <span class="hljs-keyword">this</span>.$refs.form.validate(<span class="hljs-function">(<span class="hljs-params">valid</span>) =&gt;</span> {
+                  <span class="hljs-keyword">if</span> (valid) {
+                    <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'提交成功'</span>);
+                  } <span class="hljs-keyword">else</span> {
+                    <span class="hljs-built_in">window</span>.alert(<span class="hljs-string">'表单校验失败'</span>);
+                  }
+                })
+              },
+              handleReset () {
+                <span class="hljs-keyword">this</span>.$refs.form.resetFields();
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>运行效果：</p>
+      <p></p>
+      <figure><img class="lazyload inited"
+          data-src="https://user-gold-cdn.xitu.io/2018/10/30/166c3b8a77e382ec?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"
+          data-width="1280" data-height="496"
+          src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1280&quot; height=&quot;496&quot;></svg>">
+        <figcaption></figcaption>
+      </figure>
+      <p></p>
+      <p>完整的示例源码可通过 GitHub 查看：</p>
+      <p><a target="_blank" href="https://github.com/icarusion/vue-component-book"
+          rel="nofollow noopener noreferrer">github.com/icarusion/v…</a></p>
+      <blockquote>
+        <p>项目基于 Vue CLI 3 构建，下载安装依赖后，通过 npm run serve 可访问。</p>
+      </blockquote>
+      <h2 class="heading" data-id="heading-5">结语</h2>
+      <p>组件最终的效果看起来有点 “low”，但它实现的功能却不简单。通过这个实战，你或许已经感受到本小册一开始说的，组件写到最后，都是在拼 JavaScript 功底。的确，Vue.js
+        组件为我们提供了一种新的代码组织形式，但归根到底，是离不开 JS 的。</p>
+      <p>这个实战，你应该对独立组件间的通信用法有进一步的认知了吧，不过，这还不是组件通信的终极方案，下一节，我们就来看看适用于任何场景的组件通信方案。</p>
+      <p>注：本节部分代码参考 <a target="_blank" href="https://github.com/iview/iview/tree/2.0/src/components/form"
+          rel="nofollow noopener noreferrer">iView</a>。</p>
+      <h2 class="heading" data-id="heading-6">扩展阅读</h2>
+      <ul>
+        <li><a target="_blank" href="https://juejin.im/post/5bdec6e8e51d4505327a8952" rel="">一份超级详细的Vue-cli3.0使用教程</a>
+        </li>
+      </ul>
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+        <h1 class="heading" data-id="heading-0">实战 5：可用 Render 自定义列的表格组件——Table</h1>
+        <p>表格组件 Table 是中后台产品中最常用的组件之一，用于展示大量结构化的数据。大多数组件库都提供了表格组件，比如 <a target="_blank" href="https://www.iviewui.com/components/table" rel="nofollow noopener noreferrer">iView</a>，功能也是非常强大。正规的表格，是由 <code>&lt;table&gt;</code>、<code>&lt;thead&gt;</code>、<code>&lt;tbody&gt;</code>、<code>&lt;tr&gt;</code>、<code>&lt;th&gt;</code>、<code>&lt;td&gt;</code> 这些标签组成，一般分为表头 <strong>columns</strong> 和数据 <strong>data</strong>。本小节就来开发一个最基本的表格组件 Table，它支持使用 Render 函数来自定义某一列。</p>
+        <h2 class="heading" data-id="heading-1">分析</h2>
+        <p>如果表格只是呈现数据，是比较简单的，比如下图：</p>
+        <p></p><figure><img class="lazyload inited loaded" data-src="https://user-gold-cdn.xitu.io/2018/11/15/16716c44a664e7f1?imageView2/0/w/1280/h/960/format/webp/ignore-error/1" data-width="1280" data-height="342" src="https://user-gold-cdn.xitu.io/2018/11/15/16716c44a664e7f1?imageView2/0/w/1280/h/960/format/webp/ignore-error/1"><figcaption></figcaption></figure><p></p>
+        <p>因为结构简单，我们甚至不需要组件，直接使用标准的 table 系列标签就可以。但有的时候，除了呈现数据，也会带有一些交互，比如有一列操作栏，可以编辑整行的数据：</p>
+        <p></p><figure><img class="lazyload inited loaded" data-src="https://user-gold-cdn.xitu.io/2018/11/15/16716c54fc74a1a5?imageslim" data-width="1280" data-height="279" src="https://user-gold-cdn.xitu.io/2018/11/15/16716c54fc74a1a5?imageslim"><figcaption></figcaption></figure><p></p>
+        <p>写一个个的 table 系列标签是很麻烦并且重复的，而组件的好处就是省去这些基础的工作，我们直接给 Table 组件传递列的配置 <strong>columns</strong> 和行数据 <strong>data</strong>，其余的都交给 Table 组件做了。</p>
+        <p>开发 Table 组件前，有必要先了解上文说到的一系列 table 标签。一般的 table 结构是这样的：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">table</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">thead</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">tr</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">th</span>&gt;</span>姓名<span class="hljs-tag">&lt;/<span class="hljs-name">th</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">th</span>&gt;</span>年龄<span class="hljs-tag">&lt;/<span class="hljs-name">th</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">thead</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">tbody</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">tr</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">td</span>&gt;</span>王小明<span class="hljs-tag">&lt;/<span class="hljs-name">td</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">td</span>&gt;</span>18<span class="hljs-tag">&lt;/<span class="hljs-name">td</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">tr</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">td</span>&gt;</span>张小刚<span class="hljs-tag">&lt;/<span class="hljs-name">td</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">td</span>&gt;</span>25<span class="hljs-tag">&lt;/<span class="hljs-name">td</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">tbody</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">table</span>&gt;</span>
+        </code></pre><ul>
+        <li>table：定义 HTML 表格；</li>
+        <li>thead：定义表头；</li>
+        <li>tbody：定义表格主体；</li>
+        <li>tr：定义表格行；</li>
+        <li>th：定义表头单元格；</li>
+        <li>td：定义表格单元。</li>
+        </ul>
+        <p>标准的表格系列标签，跟 div+css 实现是有很大区别的，比如表格在做单元格合并时，有提供原生属性，用 div 就很麻烦了；再比如渲染原理上也有一定的区别，table 会在内容全部下载完后加载。详细的介绍可以阅读文末的扩展阅读 1。</p>
+        <p>知道了表格的结构，再来分析如何定制 API。可以看到，表格分为了两部分，表头 thead 和数据 tbody，那 props 也定义两个：</p>
+        <ul>
+        <li>
+        <p>columns：列配置，格式为数组，其中每一列 column 是一个对象，用来描述这一列的信息，它的具体说明如下：</p>
+        <ul>
+        <li>title：列头显示文字；</li>
+        <li>key：对应列内容的字段名；</li>
+        <li>render：自定义渲染列，使用 Vue 的 Render 函数，不定义则直接显示为文本。</li>
+        </ul>
+        <p>比如：</p>
+        <pre><code class="hljs js" lang="js">[
+          {
+            <span class="hljs-attr">title</span>: <span class="hljs-string">'姓名'</span>,
+            <span class="hljs-attr">key</span>: <span class="hljs-string">'name'</span>
+          },
+          {
+            <span class="hljs-attr">title</span>: <span class="hljs-string">'年龄'</span>,
+            <span class="hljs-attr">key</span>: <span class="hljs-string">'age'</span>
+          }
+        ]
+        </code></pre></li>
+        <li>
+        <p>data：显示的结构化数据，格式为数组，其中每一个对象，就是一行的数据，比如：</p>
+        <pre><code class="hljs js" lang="js">[
+          {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'王小明'</span>,
+            <span class="hljs-attr">age</span>: <span class="hljs-number">18</span>
+          },
+          {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'张小刚'</span>,
+            <span class="hljs-attr">age</span>: <span class="hljs-number">25</span>
+          }
+        ]
+        </code></pre></li>
+        </ul>
+        <p>column 定义的 <code>key</code> 值，与 data 是一一对应的，这是一种常见的数据接口定义规则，也是 Vue.js 组件中，用数据驱动而不是 slot 驱动的经典案例。</p>
+        <p>为什么 Table 组件要用数据驱动，而不是 slot 驱动呢？slot 在很多组件中的确很好用，不过 Table 组件包含了大量的基础表格标签，如果都交给使用者由 slot 承载的话，开发成本不亚于自己实现一个 table 了，而数据驱动就简单的多，数据一般从服务端获取后就可以直接使用（或简单处理），使用者主要来定义每列的配置 <strong>columns</strong> 就可以了。</p>
+        <p>因为不确定使用者要对某一列做什么交互，所以不能在 Table 内来实现自定义列。使用 Render 函数可以将复杂的自定义列模板的工作交给使用者来配置，Table 内只用一个 Functional Render 做中转。</p>
+        <h2 class="heading" data-id="heading-2">完成基础表格</h2>
+        <p>我们先来完成一个基础的表格组件，之后再接入 Render 来配置自定义列。</p>
+        <p>在 <code>src/components</code> 目录下新建 <code>table-render</code> 目录，并创建 <code>table.vue</code> 文件：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- src/components/table-render/table.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">table</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">thead</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">tr</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">th</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"col in columns"</span>&gt;</span>{{ col.title }}<span class="hljs-tag">&lt;/<span class="hljs-name">th</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">thead</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">tbody</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">tr</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"row in data"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">td</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"col in columns"</span>&gt;</span>{{ row[col.key] }}<span class="hljs-tag">&lt;/<span class="hljs-name">td</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">tbody</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">table</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">columns</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Array</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> [];
+                }
+              },
+              <span class="hljs-attr">data</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Array</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> [];
+                }
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">style</span>&gt;</span><span class="css">
+          <span class="hljs-selector-tag">table</span>{
+            <span class="hljs-attribute">width</span>: <span class="hljs-number">100%</span>;
+            <span class="hljs-attribute">border-collapse</span>: collapse;
+            <span class="hljs-attribute">border-spacing</span>: <span class="hljs-number">0</span>;
+            <span class="hljs-attribute">empty-cells</span>: show;
+            <span class="hljs-attribute">border</span>: <span class="hljs-number">1px</span> solid <span class="hljs-number">#e9e9e9</span>;
+          }
+          <span class="hljs-selector-tag">table</span> <span class="hljs-selector-tag">th</span>{
+            <span class="hljs-attribute">background</span>: <span class="hljs-number">#f7f7f7</span>;
+            <span class="hljs-attribute">color</span>: <span class="hljs-number">#5c6b77</span>;
+            <span class="hljs-attribute">font-weight</span>: <span class="hljs-number">600</span>;
+            <span class="hljs-attribute">white-space</span>: nowrap;
+          }
+          <span class="hljs-selector-tag">table</span> <span class="hljs-selector-tag">td</span>, <span class="hljs-selector-tag">table</span> <span class="hljs-selector-tag">th</span>{
+            <span class="hljs-attribute">padding</span>: <span class="hljs-number">8px</span> <span class="hljs-number">16px</span>;
+            <span class="hljs-attribute">border</span>: <span class="hljs-number">1px</span> solid <span class="hljs-number">#e9e9e9</span>;
+            <span class="hljs-attribute">text-align</span>: left;
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span>
+        </code></pre><blockquote>
+        <p>props 中的 columns 和 data 的格式都是数组，这里要注意的是，如果 props 的类型是<strong>对象</strong>或<strong>数组</strong>，它的默认值必须从一个工厂函数获取。</p>
+        </blockquote>
+        <p>tbody 内嵌套使用了两次 <code>v-for</code>，外层循环数据 data，内层循环列 columns，这样就填充了每个单元格。</p>
+        <p>新建路由 <code>table-render</code>，并在 <code>src/views/</code> 目录下新建页面 <code>table-render.vue</code>：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- src/views/table-render.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">table-render</span> <span class="hljs-attr">:columns</span>=<span class="hljs-string">"columns"</span> <span class="hljs-attr">:data</span>=<span class="hljs-string">"data"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">table-render</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> TableRender <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/table-render/table.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { TableRender },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">columns</span>: [
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'姓名'</span>,
+                    <span class="hljs-attr">key</span>: <span class="hljs-string">'name'</span>
+                  },
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'年龄'</span>,
+                    <span class="hljs-attr">key</span>: <span class="hljs-string">'age'</span>
+                  },
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'出生日期'</span>,
+                    <span class="hljs-attr">key</span>: <span class="hljs-string">'birthday'</span>
+                  },
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'地址'</span>,
+                    <span class="hljs-attr">key</span>: <span class="hljs-string">'address'</span>
+                  },
+                  {
+                    <span class="hljs-attr">title</span>: <span class="hljs-string">'操作'</span>
+                  }
+                ],
+                <span class="hljs-attr">data</span>: [
+                  {
+                    <span class="hljs-attr">name</span>: <span class="hljs-string">'王小明'</span>,
+                    <span class="hljs-attr">age</span>: <span class="hljs-number">18</span>,
+                    <span class="hljs-attr">birthday</span>: <span class="hljs-string">'919526400000'</span>,
+                    <span class="hljs-attr">address</span>: <span class="hljs-string">'北京市朝阳区芍药居'</span>
+                  },
+                  {
+                    <span class="hljs-attr">name</span>: <span class="hljs-string">'张小刚'</span>,
+                    <span class="hljs-attr">age</span>: <span class="hljs-number">25</span>,
+                    <span class="hljs-attr">birthday</span>: <span class="hljs-string">'696096000000'</span>,
+                    <span class="hljs-attr">address</span>: <span class="hljs-string">'北京市海淀区西二旗'</span>
+                  },
+                  {
+                    <span class="hljs-attr">name</span>: <span class="hljs-string">'李小红'</span>,
+                    <span class="hljs-attr">age</span>: <span class="hljs-number">30</span>,
+                    <span class="hljs-attr">birthday</span>: <span class="hljs-string">'563472000000'</span>,
+                    <span class="hljs-attr">address</span>: <span class="hljs-string">'上海市浦东新区世纪大道'</span>
+                  },
+                  {
+                    <span class="hljs-attr">name</span>: <span class="hljs-string">'周小伟'</span>,
+                    <span class="hljs-attr">age</span>: <span class="hljs-number">26</span>,
+                    <span class="hljs-attr">birthday</span>: <span class="hljs-string">'687024000000'</span>,
+                    <span class="hljs-attr">address</span>: <span class="hljs-string">'深圳市南山区深南大道'</span>
+                  }
+                ]
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>运行后的效果如下图：</p>
+        <p></p><figure><img class="lazyload inited" data-src="https://user-gold-cdn.xitu.io/2018/11/15/16716c5b99ef76ac?imageView2/0/w/1280/h/960/format/webp/ignore-error/1" data-width="1280" data-height="268" src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1280&quot; height=&quot;268&quot;></svg>"><figcaption></figcaption></figure><p></p>
+        <p>表格已经能渲染出来了，但现在的单元格只是将 data 当作纯文本来显示，所以出生日期列显示为时间戳，因为服务端对日期有时会保存为时间戳格式。如果要显示正常的日期（如1991-5-14），目前可以另写一个计算属性（computed），手动将时间戳换算为标准日期格式后，来动态修改 data 里的 <code>birthday</code> 字段。这样做对于出生日期这样的数据还好，但对于<strong>操作</strong>这一列就不可取了，因为它带有业务逻辑，点击<strong>编辑</strong>按钮，是可以对当前行数据进行修改的。这时就要用到 Render 函数。</p>
+        <h2 class="heading" data-id="heading-3">使用 Render 自定义列模板</h2>
+        <p>上一节我们已经介绍过函数式组件 Functional Render 的用法，它没有状态和上下文，主要用于中转一个组件，用在本节的 Table 组件非常合适。</p>
+        <p>先在 <code>src/components/table-render</code> 目录下新建 <code>render.js</code> 文件：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// src/components/table-render/render.js</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">functional</span>: <span class="hljs-literal">true</span>,
+          <span class="hljs-attr">props</span>: {
+            <span class="hljs-attr">row</span>: <span class="hljs-built_in">Object</span>,
+            <span class="hljs-attr">column</span>: <span class="hljs-built_in">Object</span>,
+            <span class="hljs-attr">index</span>: <span class="hljs-built_in">Number</span>,
+            <span class="hljs-attr">render</span>: <span class="hljs-built_in">Function</span>
+          },
+          <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, ctx</span>) =&gt;</span> {
+            <span class="hljs-keyword">const</span> params = {
+              <span class="hljs-attr">row</span>: ctx.props.row,
+              <span class="hljs-attr">column</span>: ctx.props.column,
+              <span class="hljs-attr">index</span>: ctx.props.index
+            };
+        
+            <span class="hljs-keyword">return</span> ctx.props.render(h, params);
+          }
+        };
+        </code></pre><p>render.js 定义了 4 个 props：</p>
+        <ul>
+        <li><strong>row</strong>：当前行的数据；</li>
+        <li><strong>column</strong>：当前列的数据；</li>
+        <li><strong>index</strong>：当前是第几行；</li>
+        <li><strong>render</strong>：具体的 render 函数内容。</li>
+        </ul>
+        <p>这里的 <code>render</code> 选项并没有渲染任何节点，而是直接返回 props 中定义的 render，并将 h 和当前的行、列、序号作为参数传递出去。然后在 table.vue 里就可以使用 render.js 组件：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- table.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">table</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">thead</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">tr</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">th</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"col in columns"</span>&gt;</span>{{ col.title }}<span class="hljs-tag">&lt;/<span class="hljs-name">th</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">thead</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">tbody</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">tr</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"(row, rowIndex) in data"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">td</span> <span class="hljs-attr">v-for</span>=<span class="hljs-string">"col in columns"</span>&gt;</span>
+                  <span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"'render' in col"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">Render</span> <span class="hljs-attr">:row</span>=<span class="hljs-string">"row"</span> <span class="hljs-attr">:column</span>=<span class="hljs-string">"col"</span> <span class="hljs-attr">:index</span>=<span class="hljs-string">"rowIndex"</span> <span class="hljs-attr">:render</span>=<span class="hljs-string">"col.render"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">Render</span>&gt;</span>
+                  <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+                  <span class="hljs-tag">&lt;<span class="hljs-name">template</span> <span class="hljs-attr">v-else</span>&gt;</span>{{ row[col.key] }}<span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">td</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">tr</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">tbody</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">table</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> Render <span class="hljs-keyword">from</span> <span class="hljs-string">'./render.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { Render },
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">columns</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Array</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> [];
+                }
+              },
+              <span class="hljs-attr">data</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Array</span>,
+                <span class="hljs-keyword">default</span> () {
+                  <span class="hljs-keyword">return</span> [];
+                }
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>如果 columns 中的某一列配置了 render 字段，那就通过 render.js 完成自定义模板，否则以字符串形式渲染。比如对出生日期这列显示为标准的日期格式，可以这样定义 column：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// src/views/table-render.vie，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">columns</span>: [
+                <span class="hljs-comment">// ...</span>
+                {
+                  <span class="hljs-attr">title</span>: <span class="hljs-string">'出生日期'</span>,
+                  <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, { row, column, index }</span>) =&gt;</span> {
+                    <span class="hljs-keyword">const</span> date = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>(<span class="hljs-built_in">parseInt</span>(row.birthday));
+                    <span class="hljs-keyword">const</span> year = date.getFullYear();
+                    <span class="hljs-keyword">const</span> month = date.getMonth() + <span class="hljs-number">1</span>;
+                    <span class="hljs-keyword">const</span> day = date.getDate();
+                    
+                    <span class="hljs-keyword">const</span> birthday = <span class="hljs-string">`<span class="hljs-subst">${year}</span>-<span class="hljs-subst">${month}</span>-<span class="hljs-subst">${day}</span>`</span>;
+                    
+                    <span class="hljs-keyword">return</span> h(<span class="hljs-string">'span'</span>, birthday);
+                  }
+                }
+              ]
+            }
+          }
+        }
+        </code></pre><p>效果如下图：</p>
+        <p></p><figure><img class="lazyload inited" data-src="https://user-gold-cdn.xitu.io/2018/11/15/16716c604e151fa0?imageView2/0/w/1280/h/960/format/webp/ignore-error/1" data-width="1280" data-height="307" src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1280&quot; height=&quot;307&quot;></svg>"><figcaption></figcaption></figure><p></p>
+        <p>需要注意的是，columns 里定义的 render，是有两个参数的，第一个是 createElement（即 h），第二个是从 render.js 传过来的对象，它包含了当前行数据（<code>row</code>）、当前列配置（<code>column</code>）、当前是第几行（<code>index</code>），使用者可以基于这 3 个参数得到任意想要的结果。由于是自定义列了，显示什么都是使用者决定的，因此在使用了 render 的 column 里可以不用写字段 <code>key</code> 。</p>
+        <p>如果你真正理解了，应该知道 columns 里定义的 render 字段，它仅仅是名字叫 render 的一个普通函数，并非 Vue.js 实例的 <em>render</em> 选项，只是我们恰巧把它叫做 render 而已，如果愿意，也可以改为其它名字，比如 renderRow。真正的 Render 函数只有一个地方，那就是 render.js 中的 render 选项，只是它代理了 column 中的 render。这里有点绕，理清这个关系，就对 Functional Render 彻底理解了。</p>
+        <h2 class="heading" data-id="heading-4">修改当前行</h2>
+        <p>有了 render，Table 组件就已经完成了，剩余工作都是使用者来配置 columns 完成各种复杂的业务逻辑。本例来介绍最常见的表格中对整行数据编辑的功能。</p>
+        <p><strong>操作</strong>这一列，默认是一个<strong>修改</strong>按钮，点击后，变为<strong>保存</strong>和<strong>取消</strong>两个按钮，同时本行其它各列都变为了输入框，并且初始值就是刚才单元格的数据。变为输入框后，可以任意修改单元格数据，点击保存按钮保存整行数据，点击取消按钮，还原至修改前的数据。</p>
+        <p>当进入编辑状态时，每一列的输入框都要有一个临时的数据使用 <code>v-model</code> 双向绑定来响应修改，所以在 data 里再声明四个数据：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// table-render.vue，部分代码省略</span>
+        {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-comment">// ...</span>
+              editName: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 第一列输入框</span>
+              editAge: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 第二列输入框</span>
+              editBirthday: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 第三列输入框</span>
+              editAddress: <span class="hljs-string">''</span>,  <span class="hljs-comment">// 第四列输入框</span>
+            }
+          }
+        }
+        </code></pre><p>同时还要知道是在修改第几行的数据，所以再加一个数据标识当前正在修改的行序号（从 0 开始）：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// table-render.vue，部分代码省略</span>
+        {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-comment">// ...</span>
+              editIndex: <span class="hljs-number">-1</span>,  <span class="hljs-comment">// 当前聚焦的输入框的行数</span>
+            }
+          }
+        }
+        </code></pre><p><code>editIndex</code> 默认给了 -1，也就是一个不存在的行号，当点击修改按钮时，再将它置为正确的行号。我们先定义操作列的 render：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// table-render.vue，部分代码省略</span>
+        {
+          data () {
+            <span class="hljs-attr">columns</span>: [
+              <span class="hljs-comment">// ...</span>
+              {
+                <span class="hljs-attr">title</span>: <span class="hljs-string">'操作'</span>,
+                <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, { row, index }</span>) =&gt;</span> {
+                  <span class="hljs-comment">// 如果当前行是编辑状态，则渲染两个按钮</span>
+                  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.editIndex === index) {
+                    <span class="hljs-keyword">return</span> [
+                      h(<span class="hljs-string">'button'</span>, {
+                        <span class="hljs-attr">on</span>: {
+                          <span class="hljs-attr">click</span>: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                            <span class="hljs-keyword">this</span>.data[index].name = <span class="hljs-keyword">this</span>.editName;
+                            <span class="hljs-keyword">this</span>.data[index].age = <span class="hljs-keyword">this</span>.editAge;
+                            <span class="hljs-keyword">this</span>.data[index].birthday = <span class="hljs-keyword">this</span>.editBirthday;
+                            <span class="hljs-keyword">this</span>.data[index].address = <span class="hljs-keyword">this</span>.editAddress;
+                            <span class="hljs-keyword">this</span>.editIndex = <span class="hljs-number">-1</span>;
+                          }
+                        }
+                      }, <span class="hljs-string">'保存'</span>),
+                      h(<span class="hljs-string">'button'</span>, {
+                        <span class="hljs-attr">style</span>: {
+                          <span class="hljs-attr">marginLeft</span>: <span class="hljs-string">'6px'</span>
+                        },
+                        <span class="hljs-attr">on</span>: {
+                          <span class="hljs-attr">click</span>: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                            <span class="hljs-keyword">this</span>.editIndex = <span class="hljs-number">-1</span>;
+                          }
+                        }
+                      }, <span class="hljs-string">'取消'</span>)
+                    ];
+                  } <span class="hljs-keyword">else</span> {  <span class="hljs-comment">// 当前行是默认状态，渲染为一个按钮</span>
+                    <span class="hljs-keyword">return</span> h(<span class="hljs-string">'button'</span>, {
+                      <span class="hljs-attr">on</span>: {
+                        <span class="hljs-attr">click</span>: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                          <span class="hljs-keyword">this</span>.editName = row.name;
+                          <span class="hljs-keyword">this</span>.editAge = row.age;
+                          <span class="hljs-keyword">this</span>.editAddress = row.address;
+                          <span class="hljs-keyword">this</span>.editBirthday = row.birthday;
+                          <span class="hljs-keyword">this</span>.editIndex = index;
+                        }
+                      }
+                    }, <span class="hljs-string">'修改'</span>);
+                  }
+                }
+              }
+            ]
+          }
+        }
+        </code></pre><p>render 里的 <code>if / else</code> 可以先看 else，因为默认是非编辑状态，也就是说 <code>editIndex</code> 还是 -1。当点击<strong>修改</strong>按钮时，把 render 中第二个参数 <code>{ row }</code> 中的各列数据赋值给了之前在 data 中声明的 4 个数据，这样做是因为之后点击<strong>取消</strong>按钮时，editName 等值已经修改了，还没有还原，所以在开启编辑状态的同时，初始化各输入框的值（当然也可以在取消时重置）。最后再把 <code>editIndex</code> 置为了对应的行序号 <code>{ index }</code>，此时 render 的 <code>if</code> 条件 <code>this.editIndex === index</code> 为真，编辑列变成了两个按钮：保存和取消。点击保存，直接修改表格源数据 data 中对应的各字段值，并将 editIndex 置为 -1，退出编辑状态；点击取消，不保存源数据，直接退出编辑状态。</p>
+        <p>除编辑列，其它各数据列都有两种状态：</p>
+        <ol>
+        <li>当 editIndex 等于当前行号 index 时，呈现输入框状态；</li>
+        <li>当 editIndex 不等于当前行号 index 时，呈现默认数据。</li>
+        </ol>
+        <p>以姓名为例：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// table-render.vue，部分代码省略</span>
+        {
+          data () {
+            <span class="hljs-attr">columns</span>: [
+              <span class="hljs-comment">// ...</span>
+              {
+                <span class="hljs-attr">title</span>: <span class="hljs-string">'姓名'</span>,
+                <span class="hljs-attr">key</span>: <span class="hljs-string">'name'</span>,
+                <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, { row, index }</span>) =&gt;</span> {
+                  <span class="hljs-keyword">let</span> edit;
+        
+                  <span class="hljs-comment">// 当前行为聚焦行时</span>
+                  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.editIndex === index) {
+                    edit = [h(<span class="hljs-string">'input'</span>, {
+                      <span class="hljs-attr">domProps</span>: {
+                        <span class="hljs-attr">value</span>: row.name
+                      },
+                      <span class="hljs-attr">on</span>: {
+                        <span class="hljs-attr">input</span>: <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+                          <span class="hljs-keyword">this</span>.editName = event.target.value;
+                        }
+                      }
+                    })];
+                  } <span class="hljs-keyword">else</span> {
+                    edit = row.name;
+                  }
+        
+                  <span class="hljs-keyword">return</span> h(<span class="hljs-string">'div'</span>, [
+                    edit
+                  ]);
+                }
+              }
+            ]
+          }
+        }
+        </code></pre><p>变量 <code>edit</code> 根据 editIndex 呈现不同的节点，还是先看 else，直接显示了对应字段的数据。在聚焦时（this.editIndex === index），渲染一个 <code>input</code> 输入框，初始值 <code>value</code> 通过 render 的 <code>domProps</code> 绑定了 <code>row.name</code>（这里也可绑定 editName），并监听了 input 事件，将输入的内容，实时缓存在数据 <code>editName</code> 中，供保存时使用。事实上，这里绑定的 value 和事件 input 就是语法糖 <code>v-model</code> 在 Render 函数中的写法，在 template 中，经常写作 <code>&lt;input v-model="editName"&gt;</code>。</p>
+        <p>其它列与姓名类似，只是对于的字段不同：</p>
+        <pre><code class="hljs js" lang="js"><span class="hljs-comment">// table-render.vue，部分代码省略</span>
+        {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">columns</span>: [
+                <span class="hljs-comment">// ...</span>
+                {
+                  <span class="hljs-attr">title</span>: <span class="hljs-string">'年龄'</span>,
+                  <span class="hljs-attr">key</span>: <span class="hljs-string">'age'</span>,
+                  <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, { row, index }</span>) =&gt;</span> {
+                    <span class="hljs-keyword">let</span> edit;
+        
+                    <span class="hljs-comment">// 当前行为聚焦行时</span>
+                    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.editIndex === index) {
+                      edit = [h(<span class="hljs-string">'input'</span>, {
+                        <span class="hljs-attr">domProps</span>: {
+                          <span class="hljs-attr">value</span>: row.age
+                        },
+                        <span class="hljs-attr">on</span>: {
+                          <span class="hljs-attr">input</span>: <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+                            <span class="hljs-keyword">this</span>.editAge = event.target.value;
+                          }
+                        }
+                      })];
+                    } <span class="hljs-keyword">else</span> {
+                      edit = row.age;
+                    }
+        
+                    <span class="hljs-keyword">return</span> h(<span class="hljs-string">'div'</span>, [
+                      edit
+                    ]);
+                  }
+                },
+                {
+                  <span class="hljs-attr">title</span>: <span class="hljs-string">'出生日期'</span>,
+                  <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, { row, index }</span>) =&gt;</span> {
+                    <span class="hljs-keyword">let</span> edit;
+        
+                    <span class="hljs-comment">// 当前行为聚焦行时</span>
+                    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.editIndex === index) {
+                      edit = [h(<span class="hljs-string">'input'</span>, {
+                        <span class="hljs-attr">domProps</span>: {
+                          <span class="hljs-attr">value</span>: row.birthday
+                        },
+                        <span class="hljs-attr">on</span>: {
+                          <span class="hljs-attr">input</span>: <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+                            <span class="hljs-keyword">this</span>.editBirthday = event.target.value;
+                          }
+                        }
+                      })];
+                    } <span class="hljs-keyword">else</span> {
+                      <span class="hljs-keyword">const</span> date = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>(<span class="hljs-built_in">parseInt</span>(row.birthday));
+                      <span class="hljs-keyword">const</span> year = date.getFullYear();
+                      <span class="hljs-keyword">const</span> month = date.getMonth() + <span class="hljs-number">1</span>;
+                      <span class="hljs-keyword">const</span> day = date.getDate();
+        
+                      edit = <span class="hljs-string">`<span class="hljs-subst">${year}</span>-<span class="hljs-subst">${month}</span>-<span class="hljs-subst">${day}</span>`</span>;
+                    }
+        
+                    <span class="hljs-keyword">return</span> h(<span class="hljs-string">'div'</span>, [
+                      edit
+                    ]);
+                  }
+                },
+                {
+                  <span class="hljs-attr">title</span>: <span class="hljs-string">'地址'</span>,
+                  <span class="hljs-attr">key</span>: <span class="hljs-string">'address'</span>,
+                  <span class="hljs-attr">render</span>: <span class="hljs-function">(<span class="hljs-params">h, { row, index }</span>) =&gt;</span> {
+                    <span class="hljs-keyword">let</span> edit;
+        
+                    <span class="hljs-comment">// 当前行为聚焦行时</span>
+                    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.editIndex === index) {
+                      edit = [h(<span class="hljs-string">'input'</span>, {
+                        <span class="hljs-attr">domProps</span>: {
+                          <span class="hljs-attr">value</span>: row.address
+                        },
+                        <span class="hljs-attr">on</span>: {
+                          <span class="hljs-attr">input</span>: <span class="hljs-function">(<span class="hljs-params">event</span>) =&gt;</span> {
+                            <span class="hljs-keyword">this</span>.editAddress = event.target.value;
+                          }
+                        }
+                      })];
+                    } <span class="hljs-keyword">else</span> {
+                      edit = row.address;
+                    }
+        
+                    <span class="hljs-keyword">return</span> h(<span class="hljs-string">'div'</span>, [
+                      edit
+                    ]);
+                  }
+                },
+              ]
+            }
+          }
+        }
+        </code></pre><blockquote>
+        <p>完整的代码见：<a target="_blank" href="https://github.com/icarusion/vue-component-book/blob/master/src/views/table-render.vue" rel="nofollow noopener noreferrer">github.com/icarusion/v…</a></p>
+        </blockquote>
+        <p>这样，可编辑行的表格示例就完成了：</p>
+        <p></p><figure><img class="lazyload inited" data-src="https://user-gold-cdn.xitu.io/2018/11/15/16716c54fc74a1a5?imageslim" data-width="1280" data-height="279" src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1280&quot; height=&quot;279&quot;></svg>"><figcaption></figcaption></figure><p></p>
+        <h2 class="heading" data-id="heading-5">结语</h2>
+        <p>本示例的 Table 组件，只展现了表格最核心的功能——自定义列模板，一个完整的 Table 组件功能要复杂的多，比如排序、筛选、列固定、表头固定、表头嵌套等。万事开头难，打好了 Table 的地基，后面的功能可以持续开发。</p>
+        <p>事实上，很多 Vue.js 的开发难题，都可以用 Render 函数来解决，它比 template 模板更灵活，可以完全发挥 JavaScript 的编程能力，因此很多 JS 的开发思想都可以借鉴。如果你习惯 JSX，那完全可以抛弃传统的 template 写法。</p>
+        <p>Render 函数虽好，但也是有弊端的，通过上面的示例可以发现，写出来的 VNode 对象是很难读的，维护性也比 template 差。下一节，我们将改写 Table 组件，用另一种思想来实现同样的功能。</p>
+        <h2 class="heading" data-id="heading-6">扩展阅读</h2>
+        <ul>
+        <li><a target="_blank" href="https://www.cnblogs.com/lovebear/archive/2012/04/18/2456081.html" rel="nofollow noopener noreferrer">Div 和 Table 的区别</a></li>
+        </ul>
+        
+    </div>
+</body>
+
+</html>

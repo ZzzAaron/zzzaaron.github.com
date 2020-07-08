@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+      <h1 class="heading" data-id="heading-0">实战 3：动态渲染 .vue 文件的组件—— Display</h1>
+      <p>你可能用过 <a target="_blank" href="https://jsfiddle.net/" rel="nofollow noopener noreferrer">jsfiddle</a> 或 <a
+          target="_blank" href="https://jsbin.com" rel="nofollow noopener noreferrer">jsbin</a> 之类的网站，在里面你可以用 CDN 的形式引入
+        Vue.js，然后在线写示例，实时运行，比如下面这个例子：</p>
+      <p><a target="_blank" href="https://jsfiddle.net/c87yh92v/"
+          rel="nofollow noopener noreferrer">jsfiddle.net/c87yh92v/</a></p>
+      <p>不过，这类网站主要是一个 html，里面包含 js、css 部分，渲染侧是用 iframe 嵌入你编写的 html，并实时更新。在这些网站写示例，是不能直接写 <code>.vue</code> 文件的，因为没法进行编译。
+      </p>
+      <p>再来看另一个网站 <a target="_blank" href="https://run.iviewui.com/" rel="nofollow noopener noreferrer">iView
+          Run</a>（之前小节也有提到），它是能够在线编写一个标准的 <code>.vue</code> 文件，并及时渲染的，它也预置了 iView 环境，你可以使用 iView
+        组件库全部的组件。本小节，我们就来实现这样一个能够动态渲染 .vue 文件的 <code>Display</code> 组件，当然，用到的核心技术就是上一节的 <code>extend</code> 和
+        <code>$mount</code>。</p>
+      <h2 class="heading" data-id="heading-1">接口设计</h2>
+      <p>一个常规的 <code>.vue</code> 文件一般都会包含 3 个部分：</p>
+      <ul>
+        <li><code>&lt;template&gt;</code>：组件的模板；</li>
+        <li><code>&lt;script&gt;</code>：组件的选项，不包含 <code>el</code>；</li>
+        <li><code>&lt;style&gt;</code>：CSS 样式。</li>
+      </ul>
+      <p>回忆一下用 <code>extend</code> 来构造一个组件实例，它的选项 <code>template</code> 其实就是上面 <code>&lt;template&gt;</code>
+        的内容，其余选项对应的是 <code>&lt;script&gt;</code>，样式 <code>&lt;style&gt;</code> 事实上与 Vue.js 无关，我们可以先不管。这样的话，当拿到一个 .vue
+        的文件（整体其实是字符串），只需要把 <code>&lt;template&gt;</code>、<code>&lt;script&gt;</code>、<code>&lt;style&gt;</code>
+        使用正则分割，把对应的部分传递给 extend 创建的实例就可以。</p>
+      <p>Display 是一个功能型的组件，没有交互和事件，只需要一个 prop：code 将 .vue 的内容传递过来，其余工作都是在组件内完成的，这对使用者很友好。当然，你也可以设计成三个 props，分别对应
+        html、js、css，那分割的工作就要使用者来完成。出于使用者优先原则，苦活累活当然是在组件内完成了，因此推荐第一个方案。</p>
+      <h2 class="heading" data-id="heading-2">实现</h2>
+      <p>在 <code>src/components</code> 目录下创建 <code>display</code> 目录，并新建 <code>display.vue</code> 文件，基本结构如下：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- display.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">"display"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">code</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-string">''</span>
+              }
+            },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">html</span>: <span class="hljs-string">''</span>,
+                <span class="hljs-attr">js</span>: <span class="hljs-string">''</span>,
+                <span class="hljs-attr">css</span>: <span class="hljs-string">''</span>
+              }
+            },
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>父级传递 <code>code</code> 后，将其分割，并保存在 data 的 html、js、css 中，后续使用。</p>
+      <p>我们使用正则，基于 <code>&lt;&gt;</code> 和 <code>&lt;/&gt;</code> 的特性进行分割：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// display.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">methods</span>: {
+            getSource (source, type) {
+              <span class="hljs-keyword">const</span> regex = <span class="hljs-keyword">new</span> <span class="hljs-built_in">RegExp</span>(<span class="hljs-string">`&lt;<span class="hljs-subst">${type}</span>[^&gt;]*&gt;`</span>);
+              <span class="hljs-keyword">let</span> openingTag = source.match(regex);
+        
+              <span class="hljs-keyword">if</span> (!openingTag) <span class="hljs-keyword">return</span> <span class="hljs-string">''</span>;
+              <span class="hljs-keyword">else</span> openingTag = openingTag[<span class="hljs-number">0</span>];
+        
+              <span class="hljs-keyword">return</span> source.slice(source.indexOf(openingTag) + openingTag.length, source.lastIndexOf(<span class="hljs-string">`&lt;/<span class="hljs-subst">${type}</span>&gt;`</span>));
+            },
+            splitCode () {
+              <span class="hljs-keyword">const</span> script = <span class="hljs-keyword">this</span>.getSource(<span class="hljs-keyword">this</span>.code, <span class="hljs-string">'script'</span>).replace(<span class="hljs-regexp">/export default/</span>, <span class="hljs-string">'return '</span>);
+              <span class="hljs-keyword">const</span> style = <span class="hljs-keyword">this</span>.getSource(<span class="hljs-keyword">this</span>.code, <span class="hljs-string">'style'</span>);
+              <span class="hljs-keyword">const</span> template = <span class="hljs-string">'&lt;div id="app"&gt;'</span> + <span class="hljs-keyword">this</span>.getSource(<span class="hljs-keyword">this</span>.code, <span class="hljs-string">'template'</span>) + <span class="hljs-string">'&lt;/div&gt;'</span>;
+        
+              <span class="hljs-keyword">this</span>.js = script;
+              <span class="hljs-keyword">this</span>.css = style;
+              <span class="hljs-keyword">this</span>.html = template;
+            },
+          }
+        }
+        </code></pre>
+      <p>getSource 方法接收两个参数：</p>
+      <ul>
+        <li>source：.vue 文件代码，即 props: code；</li>
+        <li>type：分割的部分，也就是 template、script、style。</li>
+      </ul>
+      <p>分割后，返回的内容不再包含 <code>&lt;template&gt;</code> 等标签，直接是对应的内容，在 splitCode 方法中，把分割好的代码分别赋值给 data 中声明的
+        html、js、css。有两个细节需要注意：</p>
+      <ol>
+        <li>.vue 的 <code>&lt;script&gt;</code> 部分一般都是以 <code>export default</code> 开始的，可以看到在 splitCode 方法中将它替换为了
+          <code>return</code>，这个在后文会做解释，当前只要注意，我们分割完的代码，仍然是字符串；</li>
+        <li>在分割的 <code>&lt;template&gt;</code> 外层套了一个 <code>&lt;div id="app"&gt;</code>，这是为了容错，有时使用者传递的
+          <code>code</code> 可能会忘记在外层包一个节点，没有根节点的组件，是会报错的。</li>
+      </ol>
+      <p>准备好这些基础工作后，就可以用 <code>extend</code> 渲染组件了，在这之前，我们先思考一个问题：上文说到，当前的 <code>this.js</code> 是字符串，而 extend
+        接收的选项可不是字符串，而是一个对象类型，那就要先把 this.js 转为一个对象。</p>
+      <p>不卖关子，来介绍 <code>new Function</code> 用法，先看个示例：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-keyword">const</span> sum = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Function</span>(<span class="hljs-string">'a'</span>, <span class="hljs-string">'b'</span>, <span class="hljs-string">'return a + b'</span>);
+        
+        <span class="hljs-built_in">console</span>.log(sum(<span class="hljs-number">2</span>, <span class="hljs-number">6</span>)); <span class="hljs-comment">// 8</span>
+        </code></pre>
+      <p>new Function 的语法：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-keyword">new</span> <span class="hljs-built_in">Function</span> ([arg1[, arg2[, ...argN]],] functionBody)
+        </code></pre>
+      <p>arg1, arg2, ... argN 是被函数使用的参数名称，<strong>functionBody</strong> 是一个含有包括函数定义的 JavaScript
+        语句的<strong>字符串</strong>。也就是说，示例中的字符串 <code>return a + b</code> 被当做语句执行了。</p>
+      <p>上文说到，<code>this.js</code> 中是将 <em>export default</em> 替换为 <em>return</em> 的，如果将 this.js 传入 new Function 里，那么
+        this.js 就执行了，这时因为有 return，返回的就是一个对象类型的 this.js 了。</p>
+      <p>如果你还不是很理解 new Function，可以到文末的扩展阅读进一步了解。除了 new Function，你熟悉的 <code>eval</code> 函数也可以使用，它与 new Function 功能类似。</p>
+      <p>知道了这些，下面的内容就容易理解了：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- display.vue，部分代码省略 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">"display"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> Vue <span class="hljs-keyword">from</span> <span class="hljs-string">'vue'</span>;
+          
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">component</span>: <span class="hljs-literal">null</span>
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              renderCode () {
+                <span class="hljs-keyword">this</span>.splitCode();
+        
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.html !== <span class="hljs-string">''</span> &amp;&amp; <span class="hljs-keyword">this</span>.js !== <span class="hljs-string">''</span>) {
+                  <span class="hljs-keyword">const</span> parseStrToFunc = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Function</span>(<span class="hljs-keyword">this</span>.js)();
+        
+                  parseStrToFunc.template =  <span class="hljs-keyword">this</span>.html;
+                  <span class="hljs-keyword">const</span> Component = Vue.extend( parseStrToFunc );
+                  <span class="hljs-keyword">this</span>.component = <span class="hljs-keyword">new</span> Component().$mount();
+        
+                  <span class="hljs-keyword">this</span>.$refs.display.appendChild(<span class="hljs-keyword">this</span>.component.$el);
+                }
+              }
+            },
+            mounted () {
+              <span class="hljs-keyword">this</span>.renderCode();
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <p>extend 构造的实例通过 $mount 渲染后，挂载到了组件唯一的一个节点 <code>&lt;div ref="display"&gt;</code> 上。</p>
+      <p>现在 html 和 js 都有了，还剩下 css。加载 css 没有什么奇技淫巧，就是创建一个 <code>&lt;style&gt;</code> 标签，然后把 css 写进去，再插入到页面的
+        <code>&lt;head&gt;</code> 中，这样 css 就被浏览器解析了。为了便于后面在 <code>this.code</code> 变化或组件销毁时移除动态创建的
+        <code>&lt;style&gt;</code> 标签，我们给每个 style 标签加一个随机 id 用于标识。</p>
+      <p>在 <code>src/utils</code> 目录下新建 <code>random_str.js</code> 文件，并写入以下内容：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// 生成随机字符串</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">len = <span class="hljs-number">32</span></span>) </span>{
+          <span class="hljs-keyword">const</span> $chars = <span class="hljs-string">'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'</span>;
+          <span class="hljs-keyword">const</span> maxPos = $chars.length;
+          <span class="hljs-keyword">let</span> str = <span class="hljs-string">''</span>;
+          <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; len; i++) {
+            str += $chars.charAt(<span class="hljs-built_in">Math</span>.floor(<span class="hljs-built_in">Math</span>.random() * maxPos));
+          }
+          <span class="hljs-keyword">return</span> str;
+        }
+        </code></pre>
+      <p>不难理解，这个方法是从指定的 a-zA-Z0-9 中随机生成 32 位的字符串。</p>
+      <p>补全 renderCode 方法：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// display.vue，部分代码省略</span>
+        <span class="hljs-keyword">import</span> randomStr <span class="hljs-keyword">from</span> <span class="hljs-string">'../../utils/random_str.js'</span>;
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          data () {
+            <span class="hljs-keyword">return</span> {
+              <span class="hljs-attr">id</span>: randomStr()
+            }
+          },
+          <span class="hljs-attr">methods</span>: {
+            renderCode () {
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.html !== <span class="hljs-string">''</span> &amp;&amp; <span class="hljs-keyword">this</span>.js !== <span class="hljs-string">''</span>) {
+                <span class="hljs-comment">// ...</span>
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.css !== <span class="hljs-string">''</span>) {
+                  <span class="hljs-keyword">const</span> style = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'style'</span>);
+                  style.type = <span class="hljs-string">'text/css'</span>;
+                  style.id = <span class="hljs-keyword">this</span>.id;
+                  style.innerHTML = <span class="hljs-keyword">this</span>.css;
+                  <span class="hljs-built_in">document</span>.getElementsByTagName(<span class="hljs-string">'head'</span>)[<span class="hljs-number">0</span>].appendChild(style);
+                }
+              }
+            }
+          }
+        }
+        </code></pre>
+      <p>当 Display 组件销毁时，也要手动销毁 extend 创建的实例以及上面的 css：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// display.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">methods</span>: {
+            destroyCode () {
+              <span class="hljs-keyword">const</span> $target = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-keyword">this</span>.id);
+              <span class="hljs-keyword">if</span> ($target) $target.parentNode.removeChild($target);
+        
+              <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.component) {
+                <span class="hljs-keyword">this</span>.$refs.display.removeChild(<span class="hljs-keyword">this</span>.component.$el);
+                <span class="hljs-keyword">this</span>.component.$destroy();
+                <span class="hljs-keyword">this</span>.component = <span class="hljs-literal">null</span>;
+              }
+            }
+          },
+          beforeDestroy () {
+            <span class="hljs-keyword">this</span>.destroyCode();
+          }
+        }
+        </code></pre>
+      <p>当 <code>this.code</code> 更新时，整个过程要重新来一次，所以要对 <code>code</code> 进行 watch 监听：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// display.vue，部分代码省略</span>
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+          <span class="hljs-attr">watch</span>: {
+            code () {
+              <span class="hljs-keyword">this</span>.destroyCode();
+              <span class="hljs-keyword">this</span>.renderCode();
+            }
+          }
+        }
+        </code></pre>
+      <p>以上就是 Display 组件的所有内容。</p>
+      <h2 class="heading" data-id="heading-3">使用</h2>
+      <p>新建一条路由，并在 <code>src/views</code> 下新建页面 <code>display.vue</code> 来使用 Display 组件：</p>
+      <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- src/views/display.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">h3</span>&gt;</span>动态渲染 .vue 文件的组件—— Display<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+        
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-display</span> <span class="hljs-attr">:code</span>=<span class="hljs-string">"code"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i-display</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> iDisplay <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/display/display.vue'</span>;
+          <span class="hljs-keyword">import</span> defaultCode <span class="hljs-keyword">from</span> <span class="hljs-string">'./default-code.js'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { iDisplay },
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">code</span>: defaultCode
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre>
+      <pre><code class="hljs js" lang="js"><span class="hljs-comment">// src/views/default-code.js</span>
+        <span class="hljs-keyword">const</span> code =
+        <span class="hljs-string">`&lt;template&gt;
+            &lt;div&gt;
+                &lt;input v-model="message"&gt;
+                {{ message }}
+            &lt;/div&gt;
+        &lt;/template&gt;
+        &lt;script&gt;
+            export default {
+                data () {
+                    return {
+                        message: ''
+                    }
+                }
+            }
+        &lt;/script&gt;`</span>;
+        
+        <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> code;
+        </code></pre>
+      <p>如果使用的是 Vue CLI 3 默认的配置，直接运行时，会抛出下面的错误：</p>
+      <blockquote>
+        <p>[Vue warn]: You are using the runtime-only build of Vue where the template compiler is not available. Either
+          pre-compile the templates into render functions, or use the compiler-included build.</p>
+      </blockquote>
+      <p>这涉及到另一个知识点，就是 Vue.js 的版本。在使用 Vue.js 2 时，有独立构建（standalone）和运行时构建（runtime-only）两种版本可供选择，详细的介绍请阅读文末扩展阅读 2。</p>
+      <p>Vue CLI 3 默认使用了 vue.runtime.js，它不允许编译 template 模板，因为我们在 Vue.extend 构造实例时，用了 <code>template</code>
+        选项，所以会报错。解决方案有两种，一是手动将 template 改写为 Render 函数，但这成本太高；另一种是对 Vue CLI 3 创建的工程做简单的配置。我们使用后者。</p>
+      <p>在项目根目录，新建文件 <code>vue.config.js</code>：</p>
+      <pre><code class="hljs js" lang="js"><span class="hljs-built_in">module</span>.exports = {
+          <span class="hljs-attr">runtimeCompiler</span>: <span class="hljs-literal">true</span>
+        };
+        </code></pre>
+      <p>它的作用是，是否使用包含运行时编译器的 Vue 构建版本。设置为 <code>true</code> 后就可以在 Vue 组件中使用 <code>template</code> 选项了，但是应用额外增加 10kb
+        左右（还好吧）。</p>
+      <p>加了这个配置，报错就消失了，组件也能正常显示。</p>
+      <p>以上就是 Display 组件所有的内容，如果你感兴趣，可以把它进一步封装，做成 iView Run 这样的产品。</p>
+      <h2 class="heading" data-id="heading-4">结语</h2>
+      <p>这个小小的 Display 组件，能做的事还有很多，比如要写一套 Vue 组件库的文档，传统方法是在开发环境写一个个的 .vue
+        文件，然后编译打包、上传资源、上线，如果要修改，哪怕一个标点符号，都要重新编译打包、上传资源、上线。有了 Display 组件，只需要提供一个服务来在线修改文档的 .vue，就能实时更新，不用打包、上传、上线。</p>
+      <p>还有一点很重要的是，可以看到，在 iView Run 里，默认是直接可以写 iView 组件库的全部组件，并没有额外引入，这是因为 Display 所在的工程，已经将 iView 安装在了全局，Vue.extend
+        在构造实例时，已经可以使用全局安装的插件了，如果你还全局安装了其它插件，比如 axios，都是可以直接使用的。</p>
+      <h2 class="heading" data-id="heading-5">扩展阅读</h2>
+      <ul>
+        <li><a target="_blank"
+            href="https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Function"
+            rel="nofollow noopener noreferrer">new Function</a></li>
+        <li><a target="_blank"
+            href="https://jingsam.github.io/2016/10/23/standalone-vs-runtime-only-build-in-vuejs2.html"
+            rel="nofollow noopener noreferrer">Vue.js 2.0 独立构建和运行时构建的区别</a></li>
+      </ul>
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+  <div class='main'>
+    <div class="left-list">
+      <a href="./0.html">开篇：Vue.js 的精髓——组件</a>
+      <a href="./1.html">基础：Vue.js 组件的三个 API：prop、event、slot</a>
+      <a href="./2.html">组件的通信 1：provide / inject</a>
+      <a href="./3.html">组件的通信 2：派发与广播——自行实现 dispatch 和 broadcast 方法</a>
+      <a href="./4.html">实战 1：具有数据校验功能的表单组件——Form</a>
+      <a href="./5.html">组件的通信 3：找到任意组件实例——findComponents 系列方法</a>
+      <a href="./6.html">实战 2：组合多选框组件——CheckboxGroup & Checkbox</a>
+      <a href="./7.html">Vue 的构造器——extend 与手动挂载——$mount</a>
+      <a href="./8.html">实战 3：动态渲染 .vue 文件的组件—— Display</a>
+      <a href="./9.html">实战 4：全局提示组件——$Alert</a>
+      <a href="./10.html">更灵活的组件：Render 函数与 Functional Render</a>
+      <a href="./11.html">实战 5：可用 Render 自定义列的表格组件——Table</a>
+      <a href="./12.html">实战 6：可用 slot-scope 自定义列的表格组件——Table</a>
+      <a href="./13.html">递归组件与动态组件</a>
+      <a href="./14.html">实战 7：树形控件——Tree</a>
+      <a href="./15.html">拓展：Vue.js 容易忽略的 API 详解</a>
+      <a href="./16.html">拓展：Vue.js 面试、常见问题答疑</a>
+      <a href="./17.html">拓展：如何做好一个开源项目（上篇）</a>
+      <a href="./18.html">拓展：如何做好一个开源项目（下篇）</a>
+      <a href="./19.html">写在最后</a>
+    </div>
+    <div data-v-79594370="" class="entry-content article-content">
+        <h1 class="heading" data-id="heading-0">递归组件与动态组件</h1>
+        <h2 class="heading" data-id="heading-1">递归组件</h2>
+        <p>递归组件就是指组件在模板中调用自己，开启递归组件的必要条件，就是在组件中设置一个 <code>name</code> 选项。比如下面的示例：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">my-component</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">my-component</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'my-component'</span>
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>在 Webpack 中导入一个 Vue.js 组件，一般是通过 <code>import myComponent from 'xxx'</code> 这样的语法，然后在当前组件（页面）的 <code>components: { myComponent }</code> 里注册组件。这种组件是不强制设置 <code>name</code> 字段的，组件的名字都是使用者在 import 进来后自定义的，但递归组件的使用者是组件自身，它得知道这个组件叫什么，因为没有用 <code>components</code> 注册，所以 <code>name</code> 字段就是必须的了。除了递归组件用 <code>name</code>，我们在之前的小节也介绍过，用一些特殊的方法，通过遍历匹配组件的 name 选项来寻找组件实例。</p>
+        <p>不过呢，上面的示例是有问题的，如果直接运行，会抛出 <code>max stack size exceeded</code> 的错误，因为组件会无限递归下去，死循环。解决这个问题，就要给递归组件一个限制条件，一般会在递归组件上用 <code>v-if</code> 在某个地方设置为 <code>false</code> 来终结。比如我们给上面的示例加一个属性 count，当大于 5 时就不再递归：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">my-component</span> <span class="hljs-attr">:count</span>=<span class="hljs-string">"count + 1"</span> <span class="hljs-attr">v-if</span>=<span class="hljs-string">"count &lt;= 5"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">my-component</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">name</span>: <span class="hljs-string">'my-component'</span>,
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-attr">count</span>: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">Number</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-number">1</span>
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>所以，总结下来，实现一个递归组件的必要条件是：</p>
+        <ul>
+        <li>要给组件设置 <strong>name</strong>；</li>
+        <li>要有一个明确的结束条件</li>
+        </ul>
+        <p>递归组件常用来开发具有未知层级关系的独立组件，在业务开发中很少使用。比如常见的有级联选择器和树形控件：</p>
+        <p></p><figure><img class="lazyload inited" data-src="https://user-gold-cdn.xitu.io/2018/11/22/167398b8f5a828b1?imageView2/0/w/1280/h/960/format/webp/ignore-error/1" data-width="1280" data-height="540" src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;1280&quot; height=&quot;540&quot;></svg>"><figcaption></figcaption></figure><p></p>
+        <p>这类组件一般都是数据驱动型的，父级有一个字段 children，然后递归。下一节的实战，会开发一个树形控件 Tree。</p>
+        <h2 class="heading" data-id="heading-2">动态组件</h2>
+        <p>有的时候，我们希望根据一些条件，动态地切换某个组件，或动态地选择渲染某个组件。在之前小节介绍函数式组件 Functional Render 时，已经说过，它是一个没有上下文的函数，常用于程序化地在多个组件中选择一个。使用 Render 或 Functional Render 可以解决动态切换组件的需求，不过那是基于一个 JS 对象（Render 函数），而 Vue.js 提供了另外一个内置的组件 <code>&lt;component&gt;</code> 和 <code>is</code> 特性，可以更好地实现动态组件。</p>
+        <p>先来看一个 <code>&lt;component&gt;</code> 和 <code>is</code> 的基本示例，首先定义三个普通组件：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- a.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            组件 A
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+        
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- b.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            组件 B
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+        
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- c.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            组件 C
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+        
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>然后在父组件中导入这 3 个组件，并动态切换：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleChange('A')"</span>&gt;</span>显示 A 组件<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleChange('B')"</span>&gt;</span>显示 B 组件<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">button</span> @<span class="hljs-attr">click</span>=<span class="hljs-string">"handleChange('C')"</span>&gt;</span>显示 C 组件<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        
+            <span class="hljs-tag">&lt;<span class="hljs-name">component</span> <span class="hljs-attr">:is</span>=<span class="hljs-string">"component"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">component</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> componentA <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/a.vue'</span>;
+          <span class="hljs-keyword">import</span> componentB <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/b.vue'</span>;
+          <span class="hljs-keyword">import</span> componentC <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/c.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            data () {
+              <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">component</span>: componentA
+              }
+            },
+            <span class="hljs-attr">methods</span>: {
+              handleChange (component) {
+                <span class="hljs-keyword">if</span> (component === <span class="hljs-string">'A'</span>) {
+                  <span class="hljs-keyword">this</span>.component = componentA;
+                } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (component === <span class="hljs-string">'B'</span>) {
+                  <span class="hljs-keyword">this</span>.component = componentB;
+                } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (component === <span class="hljs-string">'C'</span>) {
+                  <span class="hljs-keyword">this</span>.component = componentC;
+                }
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>这里的 <code>is</code> 动态绑定的是一个组件对象（Object），它直接指向 a / b / c 三个组件中的一个。除了直接绑定一个 Object，还可以是一个 String，比如标签名、组件名。下面的这个组件，将原生的按钮 button 进行了封装，如果传入了 <code>prop: to</code>，那它会渲染为一个 <code>&lt;a&gt;</code> 标签，用于打开这个链接地址，如果没有传入 <code>to</code>，就当作普通 button 使用。来看下面的示例：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- button.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">component</span> <span class="hljs-attr">:is</span>=<span class="hljs-string">"tagName"</span> <span class="hljs-attr">v-bind</span>=<span class="hljs-string">"tagProps"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">slot</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">slot</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">component</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">props</span>: {
+              <span class="hljs-comment">// 链接地址</span>
+              to: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-string">''</span>
+              },
+              <span class="hljs-comment">// 链接打开方式，如 _blank</span>
+              target: {
+                <span class="hljs-attr">type</span>: <span class="hljs-built_in">String</span>,
+                <span class="hljs-attr">default</span>: <span class="hljs-string">'_self'</span>
+              }
+            },
+            <span class="hljs-attr">computed</span>: {
+              <span class="hljs-comment">// 动态渲染不同的标签</span>
+              tagName () {
+                <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.to === <span class="hljs-string">''</span> ? <span class="hljs-string">'button'</span> : <span class="hljs-string">'a'</span>;
+              },
+              <span class="hljs-comment">// 如果是链接，把这些属性都绑定在 component 上</span>
+              tagProps () {
+                <span class="hljs-keyword">let</span> props = {};
+        
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.to) {
+                  props = {
+                    <span class="hljs-attr">target</span>: <span class="hljs-keyword">this</span>.target,
+                    <span class="hljs-attr">href</span>: <span class="hljs-keyword">this</span>.to
+                  }
+                }
+        
+                <span class="hljs-keyword">return</span> props;
+              }
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>使用组件：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-button</span>&gt;</span>普通按钮<span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">br</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> <span class="hljs-attr">to</span>=<span class="hljs-string">"https://juejin.im"</span>&gt;</span>链接按钮<span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">br</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i-button</span> <span class="hljs-attr">to</span>=<span class="hljs-string">"https://juejin.im"</span> <span class="hljs-attr">target</span>=<span class="hljs-string">"_blank"</span>&gt;</span>新窗口打开链接按钮<span class="hljs-tag">&lt;/<span class="hljs-name">i-button</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">import</span> iButton <span class="hljs-keyword">from</span> <span class="hljs-string">'../components/a.vue'</span>;
+        
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            <span class="hljs-attr">components</span>: { iButton }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>最终会渲染出一个原生的 <code>&lt;button&gt;</code> 按钮和两个原生的链接 <code>&lt;a&gt;</code>，且第二个点击会在新窗口中打开链接，如图：</p>
+        <p></p><figure><img class="lazyload inited" data-src="https://user-gold-cdn.xitu.io/2018/11/22/167398c004dc0c60?imageView2/0/w/1280/h/960/format/webp/ignore-error/1" data-width="328" data-height="166" src="data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; version=&quot;1.1&quot; width=&quot;328&quot; height=&quot;166&quot;></svg>"><figcaption></figcaption></figure><p></p>
+        <p>i-button 组件中的 <code>&lt;component&gt;</code> <code>is</code> 绑定的就是一个标签名称 button / a，并且通过 <code>v-bind</code> 将一些额外的属性全部绑定到了 <code>&lt;component&gt;</code> 上。</p>
+        <p>再回到第一个 a / b / c 组件切换的示例，如果这类的组件，频繁切换，事实上组件是会重新渲染的，比如我们在组件 A 里加两个生命周期：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-comment">&lt;!-- a.vue --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>
+            组件 A
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+          <span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> {
+            mounted () {
+              <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'组件创建了'</span>);
+            },
+            beforeDestroy () {
+              <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'组件销毁了'</span>);
+            }
+          }
+        </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+        </code></pre><p>只要切换到 A 组件，<code>mounted</code> 就会触发一次，切换到其它组件，<code>beforeDestroy</code> 也会触发一次，说明组件再重新渲染，这样有可能导致性能问题。为了避免组件的重复渲染，可以在 <code>&lt;component&gt;</code> 外层套一个 Vue.js 内置的 <code>&lt;keep-alive&gt;</code> 组件，这样，组件就会被缓存起来：</p>
+        <pre><code class="hljs html" lang="html"><span class="hljs-tag">&lt;<span class="hljs-name">keep-alive</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">component</span> <span class="hljs-attr">:is</span>=<span class="hljs-string">"component"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">component</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">keep-alive</span>&gt;</span>
+        </code></pre><p>这时，只有 <code>mounted</code> 触发了，如果不离开当前页面，切换到其它组件，<code>beforeDestroy</code> 不会被触发，说明组件已经被缓存了。</p>
+        <p>keep-alive 还有一些额外的 props 可以配置：</p>
+        <ul>
+        <li><code>include</code>：字符串或正则表达式。只有名称匹配的组件会被缓存。</li>
+        <li><code>exclude</code>：字符串或正则表达式。任何名称匹配的组件都不会被缓存。</li>
+        <li><code>max</code>：数字。最多可以缓存多少组件实例。</li>
+        </ul>
+        <h2 class="heading" data-id="heading-3">结语</h2>
+        <p>还有一类是异步组件，Vue.js 文档已经介绍的很清楚了，可以阅读文末的扩展阅读 1。事实上异步组件我们用的很多，比如 router 的配置列表，一般都是用的异步组件形式：</p>
+        <pre><code class="hljs js" lang="js">{
+          <span class="hljs-attr">path</span>: <span class="hljs-string">'/form'</span>,
+          <span class="hljs-attr">component</span>: <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">'./views/form.vue'</span>)
+        }
+        </code></pre><p>这样每个页面才会在路由到时才加载对应的 JS 文件，否则入口文件会非常庞大。</p>
+        <p>递归组件、动态组件和异步组件是 Vue.js 中相对冷门的 3 种组件模式，不过在封装复杂的独立组件时，前两者会经常使用。</p>
+        <h2 class="heading" data-id="heading-4">扩展阅读</h2>
+        <ul>
+        <li><a target="_blank" href="https://cn.vuejs.org/v2/guide/components-dynamic-async.html#%E5%BC%82%E6%AD%A5%E7%BB%84%E4%BB%B6" rel="nofollow noopener noreferrer">异步组件</a></li>
+        </ul>
+        
+    </div>
+</body>
+
+</html>
