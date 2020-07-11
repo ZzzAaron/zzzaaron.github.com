@@ -1,2 +1,2 @@
 vscode_settinf_sync:
-GitHub Gist: 6e7fc9fb413a8117b20b5d3db97cdbcb
+GitHub Gist: b7285e56a2c591aa47bf90279225ddb0
